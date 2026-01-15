@@ -42,6 +42,7 @@ interface ScannedToken {
   sellTax: string;
   safetyScore: number;
   safetyReasons: string[];
+  riskWarnings?: string[];
   imageUrl: string | null;
   priceChange24h: string | number | null;
   dexscreenerUrl: string | null;
@@ -210,19 +211,33 @@ export function UnifiedSearch({ onSearch, searchQuery }: UnifiedSearchProps) {
                     <span className="text-2xl text-primary glow-green">{scannedToken.tokenSymbol}</span>
                     <span className="text-lg text-muted-foreground font-normal">{scannedToken.tokenName}</span>
                   </CardTitle>
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
                     <Badge variant="outline" className="text-xs">
                       {scannedToken.chain.toUpperCase()}
                     </Badge>
-                    {scanSource === 'database' && (
+                    {scannedToken.safetyScore >= 75 ? (
                       <Badge className="bg-primary/20 text-primary text-xs">
                         <CheckCircle className="w-3 h-3 mr-1" />
-                        Verified Token
+                        SAFE
+                      </Badge>
+                    ) : scannedToken.safetyScore >= 50 ? (
+                      <Badge className="bg-yellow-500/20 text-yellow-500 text-xs">
+                        <AlertTriangle className="w-3 h-3 mr-1" />
+                        CAUTION
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-red-500/20 text-red-500 text-xs">
+                        <AlertTriangle className="w-3 h-3 mr-1" />
+                        HIGH RISK
+                      </Badge>
+                    )}
+                    {scanSource === 'database' && (
+                      <Badge className="bg-blue-500/20 text-blue-400 text-xs">
+                        Verified
                       </Badge>
                     )}
                     {scanSource === 'live' && (
-                      <Badge className="bg-yellow-500/20 text-yellow-500 text-xs">
-                        <AlertTriangle className="w-3 h-3 mr-1" />
+                      <Badge variant="outline" className="text-xs">
                         Live Scan
                       </Badge>
                     )}
@@ -340,9 +355,29 @@ export function UnifiedSearch({ onSearch, searchQuery }: UnifiedSearchProps) {
               </Badge>
             </div>
 
+            {scannedToken.riskWarnings && scannedToken.riskWarnings.length > 0 && (
+              <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 space-y-2">
+                <h4 className="text-sm font-medium text-red-500 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4" />
+                  Risk Warnings
+                </h4>
+                <ul className="space-y-1">
+                  {scannedToken.riskWarnings.map((warning, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-red-400">
+                      <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                      {warning}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <h4 className="text-sm font-medium text-foreground">Safety Analysis</h4>
+                <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-primary" />
+                  Safety Analysis
+                </h4>
                 <ul className="space-y-1">
                   {scannedToken.safetyReasons.map((reason, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm text-primary">

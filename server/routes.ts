@@ -421,12 +421,20 @@ export async function registerRoutes(app: Express): Promise<void> {
       } catch {}
 
       const safetyReasons: string[] = [];
+      const riskWarnings: string[] = [];
       let safetyScore = 0;
 
       const ownershipRenounced = !rugCheckData.mintAuthority && !rugCheckData.freezeAuthority;
       if (ownershipRenounced) {
         safetyScore += 25;
         safetyReasons.push("Mint and freeze authority renounced");
+      } else {
+        if (rugCheckData.mintAuthority) {
+          riskWarnings.push("Mint authority NOT renounced - can create more tokens");
+        }
+        if (rugCheckData.freezeAuthority) {
+          riskWarnings.push("Freeze authority active - can freeze your tokens");
+        }
       }
 
       const lpData = rugCheckData.markets?.[0]?.lp;
@@ -434,18 +442,36 @@ export async function registerRoutes(app: Express): Promise<void> {
       if (liquidityLocked) {
         safetyScore += 25;
         safetyReasons.push(`${lpData?.lpLockedPct}% liquidity locked`);
+      } else {
+        const lockedPct = lpData?.lpLockedPct || 0;
+        if (lockedPct < 50) {
+          riskWarnings.push(`Only ${lockedPct}% liquidity locked - high rug pull risk`);
+        } else {
+          riskWarnings.push(`${lockedPct}% liquidity locked - moderate risk`);
+        }
       }
 
-      const hasHighRisks = rugCheckData.risks?.some(
+      const highRisks = rugCheckData.risks?.filter(
         (r) => r.level === "danger" || r.level === "high"
-      );
-      if (!hasHighRisks) {
+      ) || [];
+      
+      if (highRisks.length === 0) {
         safetyScore += 25;
         safetyReasons.push("No high-risk indicators detected");
+      } else {
+        highRisks.forEach((risk) => {
+          riskWarnings.push(`${risk.name}: ${risk.description}`);
+        });
       }
 
-      safetyScore += 15;
-      safetyReasons.push("Contract visible on Dexscreener");
+      const hasLiquidity = pair.liquidity?.usd && pair.liquidity.usd > 1000;
+      if (hasLiquidity) {
+        safetyScore += 15;
+        safetyReasons.push("Contract visible on Dexscreener");
+      } else {
+        safetyScore += 5;
+        riskWarnings.push("Very low liquidity - high slippage risk");
+      }
 
       safetyScore += 10;
       safetyReasons.push("Taxes within acceptable range");
@@ -466,12 +492,13 @@ export async function registerRoutes(app: Express): Promise<void> {
           liquidityLocked: liquidityLocked || false,
           liquidityLockDurationMonths: liquidityLocked ? 6 : null,
           ownershipRenounced: ownershipRenounced,
-          honeypotSafe: !hasHighRisks,
+          honeypotSafe: highRisks.length === 0,
           contractVerified: true,
           buyTax: "0",
           sellTax: "0",
           safetyScore: safetyScore,
           safetyReasons: safetyReasons,
+          riskWarnings: riskWarnings,
           imageUrl: pair.info?.imageUrl || null,
           priceChange24h: pair.priceChange?.h24,
           dexscreenerUrl: pair.url,
