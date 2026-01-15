@@ -101,6 +101,12 @@ Uses Replit's PostgreSQL database with Drizzle ORM.
 - **Admins Tab**: Manage sub-admins (super_admin only)
 
 ## Authentication
-Admin access requires Replit Auth login. Add admins to the `adminUsers` table:
-- `super_admin` role: Full access including sub-admin management
-- `admin` role: Access to all features except admin management
+Admin access is protected by:
+1. **Secret URL**: `/ctrl-x7k9m2p4q8` (not public)
+2. **Password Protection**: Required to access admin dashboard
+3. Session-based - password remembered until browser closes
+
+## Chart Display
+- Charts are displayed in an embedded modal within the site
+- Uses DexScreener embed with dark theme
+- No external navigation required

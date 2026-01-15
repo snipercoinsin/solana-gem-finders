@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { VerifiedToken } from '@/hooks/useVerifiedTokens';
 import { formatPrice, formatCompact, formatTimeAgo, truncateAddress } from '@/lib/formatters';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ChartDialog } from './ChartDialog';
 import { 
   ExternalLink, 
   Copy, 
@@ -29,6 +31,7 @@ interface ExpandedTokenCardProps {
 
 export function ExpandedTokenCard({ token, isNew, isFeatured }: ExpandedTokenCardProps) {
   const { toast } = useToast();
+  const [chartOpen, setChartOpen] = useState(false);
 
   const copyAddress = () => {
     navigator.clipboard.writeText(token.contractAddress);
@@ -270,26 +273,25 @@ export function ExpandedTokenCard({ token, isNew, isFeatured }: ExpandedTokenCar
               )}
             </div>
             
-            {token.dexscreenerUrl && (
-              <Button
-                size="sm"
-                variant="default"
-                asChild
-              >
-                <a
-                  href={token.dexscreenerUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  data-testid="button-chart"
-                >
-                  <BarChart3 className="w-3 h-3 mr-1" />
-                  Chart
-                </a>
-              </Button>
-            )}
+            <Button
+              size="sm"
+              variant="default"
+              onClick={() => setChartOpen(true)}
+              data-testid="button-chart"
+            >
+              <BarChart3 className="w-3 h-3 mr-1" />
+              Chart
+            </Button>
           </div>
         </div>
       </CardContent>
+
+      <ChartDialog
+        open={chartOpen}
+        onOpenChange={setChartOpen}
+        contractAddress={token.contractAddress}
+        tokenSymbol={token.tokenSymbol}
+      />
     </Card>
   );
 }

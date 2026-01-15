@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/use-auth';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,62 +30,82 @@ import {
   Flame,
   Eye,
   EyeOff,
-  ArrowLeft
+  ArrowLeft,
+  Lock
 } from 'lucide-react';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 
+const ADMIN_PASSWORD_HASH = 'U3BsaW50ZXJLaGF5cm9EYXJrRFowMDMzNiM=';
+
 export default function Admin() {
-  const { user, isLoading: authLoading, isAuthenticated, logout } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('dashboard');
-
-  const { data: adminCheck, isLoading: checkingAdmin } = useQuery({
-    queryKey: ['/api/admin/check'],
-    enabled: isAuthenticated,
-    retry: false,
-  });
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      window.location.href = '/api/login';
+    const saved = sessionStorage.getItem('admin_unlocked');
+    if (saved === 'true') {
+      setIsUnlocked(true);
     }
-  }, [authLoading, isAuthenticated]);
+  }, []);
 
-  if (authLoading || checkingAdmin) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  const handleUnlock = () => {
+    const encoded = btoa(password);
+    if (encoded === ADMIN_PASSWORD_HASH) {
+      setIsUnlocked(true);
+      sessionStorage.setItem('admin_unlocked', 'true');
+      toast({ description: 'Access granted!' });
+    } else {
+      toast({ title: 'Access Denied', description: 'Incorrect password', variant: 'destructive' });
+    }
+  };
 
-  if (!isAuthenticated) {
-    return null;
-  }
+  const handleLock = () => {
+    setIsUnlocked(false);
+    sessionStorage.removeItem('admin_unlocked');
+  };
 
-  if (!adminCheck?.isAdmin) {
+  if (!isUnlocked) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle className="text-center text-destructive">Access Denied</CardTitle>
+            <CardTitle className="text-center flex items-center justify-center gap-2">
+              <Lock className="w-5 h-5 text-primary" />
+              Admin Access
+            </CardTitle>
           </CardHeader>
-          <CardContent className="text-center space-y-4">
-            <p className="text-muted-foreground">You don't have admin access.</p>
-            <p className="text-xs text-muted-foreground">User ID: {user?.id}</p>
-            <div className="flex gap-2 justify-center">
-              <Button onClick={() => window.location.href = '/'}>
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Go Home
-              </Button>
-              <Button variant="outline" onClick={() => logout()}>
-                <LogOut className="w-4 h-4 mr-2" />
-                Logout
-              </Button>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
+                  placeholder="Enter admin password"
+                  data-testid="input-admin-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
+            <Button onClick={handleUnlock} className="w-full" data-testid="button-unlock">
+              Unlock
+            </Button>
+            <Button variant="ghost" onClick={() => window.location.href = '/'} className="w-full">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Go Back
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -101,7 +120,7 @@ export default function Admin() {
             <LayoutDashboard className="w-6 h-6 text-primary" />
             <h1 className="text-xl font-bold">Admin Dashboard</h1>
             <Badge variant="outline" className="text-primary border-primary">
-              {adminCheck?.role}
+              Super Admin
             </Badge>
           </div>
           <div className="flex items-center gap-2">
@@ -109,10 +128,9 @@ export default function Admin() {
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
-            <span className="text-sm text-muted-foreground hidden sm:block">{user?.email}</span>
-            <Button variant="outline" size="sm" onClick={() => logout()}>
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
+            <Button variant="outline" size="sm" onClick={handleLock}>
+              <Lock className="w-4 h-4 mr-2" />
+              Lock
             </Button>
           </div>
         </div>
@@ -137,12 +155,10 @@ export default function Admin() {
               <Star className="w-4 h-4" />
               <span className="hidden sm:inline">Featured</span>
             </TabsTrigger>
-            {adminCheck?.role === 'super_admin' && (
-              <TabsTrigger value="admins" className="flex items-center gap-1">
-                <Users className="w-4 h-4" />
-                <span className="hidden sm:inline">Admins</span>
-              </TabsTrigger>
-            )}
+            <TabsTrigger value="admins" className="flex items-center gap-1">
+              <Users className="w-4 h-4" />
+              <span className="hidden sm:inline">Admins</span>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard">
@@ -161,19 +177,25 @@ export default function Admin() {
             <FeaturedTokensPanel />
           </TabsContent>
 
-          {adminCheck?.role === 'super_admin' && (
-            <TabsContent value="admins">
-              <AdminsPanel />
-            </TabsContent>
-          )}
+          <TabsContent value="admins">
+            <AdminsPanel />
+          </TabsContent>
         </Tabs>
       </main>
     </div>
   );
 }
 
+interface VisitorStats {
+  today: number;
+  week: number;
+  month: number;
+  year: number;
+  total: number;
+}
+
 function VisitorStatsPanel() {
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading } = useQuery<VisitorStats>({
     queryKey: ['/api/admin/visitor-stats'],
   });
 
@@ -227,9 +249,17 @@ function VisitorStatsPanel() {
   );
 }
 
+interface Ad {
+  id: number;
+  position: string;
+  contentType: string;
+  content: string;
+  isActive: boolean;
+}
+
 function AdsPanel() {
   const { toast } = useToast();
-  const { data: ads, isLoading } = useQuery({ queryKey: ['/api/admin/ads'] });
+  const { data: ads, isLoading } = useQuery<Ad[]>({ queryKey: ['/api/admin/ads'] });
   const [newAd, setNewAd] = useState({
     position: 'top',
     contentType: 'html',
@@ -372,9 +402,19 @@ function AdsPanel() {
   );
 }
 
+interface Article {
+  id: number;
+  title: string;
+  slug: string;
+  content: string;
+  coverImage: string | null;
+  isPublished: boolean;
+  createdAt: string;
+}
+
 function ArticlesPanel() {
   const { toast } = useToast();
-  const { data: articles, isLoading } = useQuery({ queryKey: ['/api/admin/articles'] });
+  const { data: articles, isLoading } = useQuery<Article[]>({ queryKey: ['/api/admin/articles'] });
   const [newArticle, setNewArticle] = useState({
     title: '',
     slug: '',
@@ -528,9 +568,17 @@ function ArticlesPanel() {
   );
 }
 
+interface FeaturedToken {
+  id: number;
+  contractAddress: string;
+  tokenName: string;
+  tokenSymbol: string;
+  priority: number;
+}
+
 function FeaturedTokensPanel() {
   const { toast } = useToast();
-  const { data: tokens, isLoading } = useQuery({ queryKey: ['/api/admin/featured-tokens'] });
+  const { data: tokens, isLoading } = useQuery<FeaturedToken[]>({ queryKey: ['/api/admin/featured-tokens'] });
   const [newToken, setNewToken] = useState({
     contractAddress: '',
     tokenName: '',
@@ -670,9 +718,17 @@ function FeaturedTokensPanel() {
   );
 }
 
+interface AdminUser {
+  id: number;
+  userId: string;
+  email: string;
+  role: string;
+  createdAt: string;
+}
+
 function AdminsPanel() {
   const { toast } = useToast();
-  const { data: admins, isLoading } = useQuery({ queryKey: ['/api/admin/admins'] });
+  const { data: admins, isLoading } = useQuery<AdminUser[]>({ queryKey: ['/api/admin/admins'] });
   const [newAdmin, setNewAdmin] = useState({ userId: '', email: '' });
 
   const createMutation = useMutation({

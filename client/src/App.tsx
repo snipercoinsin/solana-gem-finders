@@ -17,7 +17,7 @@ const App = () => (
         <Sonner />
         <Switch>
           <Route path="/" component={Index} />
-          <Route path="/admin" component={Admin} />
+          <Route path="/ctrl-x7k9m2p4q8" component={Admin} />
           <Route component={NotFound} />
         </Switch>
       </TooltipProvider>
