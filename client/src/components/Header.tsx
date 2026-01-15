@@ -1,15 +1,34 @@
-import { Activity, Zap, RefreshCw } from 'lucide-react';
+import { Activity, Zap, RefreshCw, Twitter, Send, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
+import { useToast } from '@/hooks/use-toast';
 
 interface HeaderProps {
   tokenCount: number;
   lastScan: string | null;
   onManualScan: () => void;
   isScanning: boolean;
+  nextScanIn?: number;
 }
 
-export function Header({ tokenCount, lastScan, onManualScan, isScanning }: HeaderProps) {
+const DONATION_ADDRESS = "6442kzhiuE78vVBKJkwPetc1jfydDaUbydYrrV3Au3We";
+const TWITTER_URL = "https://x.com/SolanaScanner";
+const TELEGRAM_URL = "https://t.me/SolanaScanner";
+
+export function Header({ tokenCount, lastScan, onManualScan, isScanning, nextScanIn }: HeaderProps) {
+  const { toast } = useToast();
+
+  const copyDonationAddress = () => {
+    navigator.clipboard.writeText(DONATION_ADDRESS);
+    toast({ description: "Donation address copied!" });
+  };
+
+  const formatCountdown = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   return (
     <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
       <div className="container mx-auto px-4 py-3">
@@ -45,18 +64,57 @@ export function Header({ tokenCount, lastScan, onManualScan, isScanning }: Heade
 
           {/* Actions */}
           <div className="flex items-center gap-2">
+            {/* Social Links */}
+            <div className="hidden sm:flex items-center gap-1">
+              <a
+                href={TWITTER_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 hover:text-primary transition-colors"
+                data-testid="link-header-twitter"
+              >
+                <Twitter className="w-4 h-4" />
+              </a>
+              <a
+                href={TELEGRAM_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 hover:text-primary transition-colors"
+                data-testid="link-header-telegram"
+              >
+                <Send className="w-4 h-4" />
+              </a>
+            </div>
+            
             <ThemeSwitcher />
+            
             <Button
               variant="outline"
               size="sm"
               onClick={onManualScan}
               disabled={isScanning}
               className="border-primary/50 hover:bg-primary/10"
+              data-testid="button-scan-now"
             >
               <RefreshCw className={`w-4 h-4 mr-2 ${isScanning ? 'animate-spin' : ''}`} />
-              {isScanning ? 'Scanning...' : 'Scan Now'}
+              {isScanning ? 'Scanning...' : nextScanIn ? `Next: ${formatCountdown(nextScanIn)}` : 'Scan Now'}
             </Button>
           </div>
+        </div>
+        
+        {/* Donation Bar */}
+        <div className="flex items-center justify-center gap-2 mt-2 pt-2 border-t border-border/50">
+          <span className="text-xs text-muted-foreground">Donate SOL:</span>
+          <code className="text-xs font-mono text-primary bg-muted/50 px-2 py-0.5 rounded">
+            {DONATION_ADDRESS.slice(0, 8)}...{DONATION_ADDRESS.slice(-6)}
+          </code>
+          <button
+            onClick={copyDonationAddress}
+            className="p-1 hover:text-primary transition-colors"
+            data-testid="button-copy-donation"
+          >
+            <Copy className="w-3 h-3" />
+          </button>
         </div>
       </div>
     </header>

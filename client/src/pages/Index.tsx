@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Header } from '@/components/Header';
 import { ExpandedTokenCard } from '@/components/ExpandedTokenCard';
 import { TokenTable } from '@/components/TokenTable';
@@ -22,6 +22,8 @@ import {
   PaginationEllipsis,
 } from '@/components/ui/pagination';
 
+const SCAN_INTERVAL = 5 * 60; // 5 minutes in seconds
+
 const Index = () => {
   const { tokens, loading, page, totalPages, totalCount, goToPage, refetch } = useVerifiedTokens();
   const { logs } = useScanLogs();
@@ -30,10 +32,13 @@ const Index = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [nextScanIn, setNextScanIn] = useState(SCAN_INTERVAL);
+  const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const countdownRef = useRef<NodeJS.Timeout | null>(null);
 
   const lastScan = logs[0] ? formatTimeAgo(logs[0].createdAt) : null;
 
-  const handleManualScan = async () => {
+  const handleManualScan = useCallback(async () => {
     setIsScanning(true);
     try {
       const response = await fetch('/api/scan-tokens', { method: 'POST' });
@@ -44,6 +49,7 @@ const Index = () => {
         description: `Scanned ${result.scanned} tokens, ${result.passed} passed`,
       });
       refetch();
+      setNextScanIn(SCAN_INTERVAL);
     } catch (err) {
       toast({
         title: "Scan Failed",
@@ -53,7 +59,33 @@ const Index = () => {
     } finally {
       setIsScanning(false);
     }
-  };
+  }, [refetch, toast]);
+
+  // Auto-scan on mount and every 5 minutes
+  useEffect(() => {
+    // Initial scan on mount
+    handleManualScan();
+
+    // Setup countdown timer
+    countdownRef.current = setInterval(() => {
+      setNextScanIn(prev => {
+        if (prev <= 1) {
+          return SCAN_INTERVAL;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    // Setup auto-scan interval
+    scanTimeoutRef.current = setInterval(() => {
+      handleManualScan();
+    }, SCAN_INTERVAL * 1000);
+
+    return () => {
+      if (scanTimeoutRef.current) clearInterval(scanTimeoutRef.current);
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
+  }, [handleManualScan]);
 
   const filteredTokens = useMemo(() => {
     return tokens.filter((token) => {
@@ -105,6 +137,7 @@ const Index = () => {
         lastScan={lastScan}
         onManualScan={handleManualScan}
         isScanning={isScanning}
+        nextScanIn={nextScanIn}
       />
 
       <main className="flex-1 container mx-auto px-4 py-6 space-y-6">
@@ -147,8 +180,8 @@ const Index = () => {
           />
         ) : viewMode === 'grid' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredTokens.map((token, index) => (
-              <ExpandedTokenCard key={token.id} token={token} isNew={index === 0 && page === 1} />
+            {filteredTokens.map((token) => (
+              <ExpandedTokenCard key={token.id} token={token} />
             ))}
           </div>
         ) : (

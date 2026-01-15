@@ -1,6 +1,7 @@
 import { VerifiedToken } from '@/hooks/useVerifiedTokens';
 import { formatPrice, formatCompact, formatTimeAgo, truncateAddress } from '@/lib/formatters';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
@@ -13,7 +14,9 @@ import {
   Send,
   Globe,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  BarChart3,
+  Activity
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -61,13 +64,17 @@ export function ExpandedTokenCard({ token, isNew }: ExpandedTokenCardProps) {
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
                 {isRecent() && (
-                  <Badge className="bg-primary text-primary-foreground text-[10px] px-1.5">
+                  <Badge className="badge-new-glow text-[10px] px-1.5 py-0.5 font-bold">
                     NEW
                   </Badge>
                 )}
                 <span className="text-lg font-bold text-foreground glow-green">
                   {token.tokenSymbol}
                 </span>
+                <div className="flex items-center gap-1">
+                  <Activity className="w-3 h-3 text-primary animate-pulse" />
+                  <span className="text-[10px] text-primary font-medium">LIVE</span>
+                </div>
               </div>
               <span className="text-muted-foreground text-xs">
                 {token.tokenName}
@@ -222,38 +229,58 @@ export function ExpandedTokenCard({ token, isNew }: ExpandedTokenCardProps) {
             </div>
           )}
 
-          <div className="flex gap-2 pt-1">
-            {token.solscanUrl && (
-              <a
-                href={token.solscanUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-muted-foreground hover:text-primary underline"
-                data-testid="link-solscan"
-              >
-                Solscan
-              </a>
-            )}
-            {token.rugcheckUrl && (
-              <a
-                href={token.rugcheckUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-muted-foreground hover:text-primary underline"
-                data-testid="link-rugcheck"
-              >
-                RugCheck
-              </a>
-            )}
+          <div className="flex items-center justify-between pt-1">
+            <div className="flex gap-2">
+              {token.solscanUrl && (
+                <a
+                  href={token.solscanUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-muted-foreground hover:text-primary underline"
+                  data-testid="link-solscan"
+                >
+                  Solscan
+                </a>
+              )}
+              {token.rugcheckUrl && (
+                <a
+                  href={token.rugcheckUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-muted-foreground hover:text-primary underline"
+                  data-testid="link-rugcheck"
+                >
+                  RugCheck
+                </a>
+              )}
+              {token.dexscreenerUrl && (
+                <a
+                  href={token.dexscreenerUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-muted-foreground hover:text-primary underline"
+                >
+                  Dexscreener
+                </a>
+              )}
+            </div>
+            
             {token.dexscreenerUrl && (
-              <a
-                href={token.dexscreenerUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-muted-foreground hover:text-primary underline"
+              <Button
+                size="sm"
+                variant="default"
+                asChild
               >
-                Dexscreener
-              </a>
+                <a
+                  href={token.dexscreenerUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  data-testid="button-chart"
+                >
+                  <BarChart3 className="w-3 h-3 mr-1" />
+                  Chart
+                </a>
+              </Button>
             )}
           </div>
         </div>
