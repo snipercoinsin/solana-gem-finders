@@ -56,7 +56,8 @@ A Solana token scanner application that identifies safe tokens using Dexscreener
 
 ### Frontend Pages
 - `/` - Main token scanner with grid/table views
-- `/admin` - Full admin dashboard with Replit Auth
+- `/bot` - Trading bot interface with wallet connection and snipe functionality
+- `/ctrl-x7k9m2p4q8` - Admin dashboard (secret URL)
 
 ## Database
 
@@ -95,6 +96,27 @@ Uses Replit's PostgreSQL database with Drizzle ORM.
 - Updated all hover effects to use hover-elevate utility (guideline compliant)
 - Added proper icons: SiSolana (violet) for header/links, FaXTwitter, FaTelegram (sky-500)
 - Removed unused TokenCard.tsx component (legacy code)
+- Added Trading Bot with Jito MEV-protected transactions for fast sniping
+- Bot admin controls for enable/disable, pricing, profit share, and trading parameters
+- Sniper Bot button in header linking to /bot page
+
+## Trading Bot Features
+- **Wallet Connection**: Import private key (encrypted with AES-256-CBC)
+- **Quick Snipe**: Fast buy tokens with customizable SOL amount and slippage
+- **Jito Integration**: MEV-protected transactions via Jito bundle endpoints
+- **Auto Sell**: Automatic take profit and stop loss functionality
+- **Profit Tracking**: 5% commission on profits only (nothing on losses)
+- **Admin Controls**: Enable/disable bot, set subscription price, configure trading limits
+- **Trade History**: View all past trades with P/L tracking
+
+### Bot API Routes
+- `GET /api/bot/settings` - Public bot settings (limits, enabled status)
+- `POST /api/bot/connect` - Connect wallet with private key
+- `POST /api/bot/buy` - Execute buy order via Jito
+- `POST /api/bot/sell` - Execute sell order via Jito
+- `GET /api/bot/session/:sessionId` - Get session details and balance
+- `GET /api/bot/trades/:sessionId` - Get trade history
+- `GET/PUT /api/admin/bot/settings` - Admin bot configuration
 
 ## Admin Dashboard Features
 - **Stats Tab**: View visitor statistics (today, week, month, year, total)
@@ -102,6 +124,7 @@ Uses Replit's PostgreSQL database with Drizzle ORM.
 - **Articles Tab**: Create/manage articles with HTML/CSS/JS content, publish/draft toggle
 - **Featured Tab**: Add tokens to featured list (appear first with animated fire icon)
 - **Admins Tab**: Manage sub-admins (super_admin only)
+- **Bot Tab**: Configure trading bot settings (enable/disable, pricing, trading limits)
 
 ## Authentication
 Admin access is protected by:
