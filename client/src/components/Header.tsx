@@ -12,8 +12,8 @@ interface HeaderProps {
 }
 
 const DONATION_ADDRESS = "6442kzhiuE78vVBKJkwPetc1jfydDaUbydYrrV3Au3We";
-const TWITTER_URL = "https://x.com/SolanaScanner";
-const TELEGRAM_URL = "https://t.me/SolanaScanner";
+const TWITTER_URL = "https://x.com/DarWebDZ";
+const TELEGRAM_URL = "https://t.me/DarWeb_DZ";
 
 export function Header({ tokenCount, lastScan, onManualScan, isScanning, nextScanIn }: HeaderProps) {
   const { toast } = useToast();

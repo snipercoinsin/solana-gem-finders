@@ -16,16 +16,18 @@ import {
   TrendingUp,
   TrendingDown,
   BarChart3,
-  Activity
+  Activity,
+  Flame
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface ExpandedTokenCardProps {
   token: VerifiedToken;
   isNew?: boolean;
+  isFeatured?: boolean;
 }
 
-export function ExpandedTokenCard({ token, isNew }: ExpandedTokenCardProps) {
+export function ExpandedTokenCard({ token, isNew, isFeatured }: ExpandedTokenCardProps) {
   const { toast } = useToast();
 
   const copyAddress = () => {
@@ -46,7 +48,7 @@ export function ExpandedTokenCard({ token, isNew }: ExpandedTokenCardProps) {
     <Card 
       className={`border-border bg-card hover:border-primary/50 transition-all ${
         isNew ? 'pulse-new' : ''
-      } ${isRecent() ? 'border-primary/30' : ''}`}
+      } ${isRecent() ? 'border-primary/30' : ''} ${isFeatured ? 'border-orange-500/50 ring-1 ring-orange-500/30' : ''}`}
       data-testid={`card-token-${token.id}`}
     >
       <CardHeader className="pb-2">
@@ -63,6 +65,9 @@ export function ExpandedTokenCard({ token, isNew }: ExpandedTokenCardProps) {
             </Avatar>
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
+                {isFeatured && (
+                  <Flame className="w-4 h-4 text-orange-500 animate-pulse" />
+                )}
                 {isRecent() && (
                   <Badge className="badge-new-glow text-[10px] px-1.5 py-0.5 font-bold">
                     NEW

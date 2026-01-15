@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Header } from '@/components/Header';
 import { ExpandedTokenCard } from '@/components/ExpandedTokenCard';
 import { TokenTable } from '@/components/TokenTable';
@@ -11,7 +12,7 @@ import { useScanLogs } from '@/hooks/useScanLogs';
 import { formatTimeAgo } from '@/lib/formatters';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Grid, List } from 'lucide-react';
+import { Grid, List, Flame } from 'lucide-react';
 import {
   Pagination,
   PaginationContent,
@@ -37,6 +38,14 @@ const Index = () => {
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
 
   const lastScan = logs[0] ? formatTimeAgo(logs[0].createdAt) : null;
+
+  const { data: featuredTokens } = useQuery({
+    queryKey: ['/api/featured-tokens'],
+  });
+
+  useEffect(() => {
+    fetch('/api/track-visit', { method: 'POST' }).catch(() => {});
+  }, []);
 
   const handleManualScan = useCallback(async () => {
     setIsScanning(true);
@@ -87,8 +96,13 @@ const Index = () => {
     };
   }, [handleManualScan]);
 
+  const featuredAddresses = useMemo(() => 
+    new Set((featuredTokens || []).map((t: any) => t.contractAddress.toLowerCase())),
+    [featuredTokens]
+  );
+
   const filteredTokens = useMemo(() => {
-    return tokens.filter((token) => {
+    const filtered = tokens.filter((token) => {
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         const matchesSearch = 
@@ -99,7 +113,15 @@ const Index = () => {
       }
       return true;
     });
-  }, [tokens, searchQuery]);
+
+    return filtered.sort((a, b) => {
+      const aFeatured = featuredAddresses.has(a.contractAddress.toLowerCase());
+      const bFeatured = featuredAddresses.has(b.contractAddress.toLowerCase());
+      if (aFeatured && !bFeatured) return -1;
+      if (!aFeatured && bFeatured) return 1;
+      return 0;
+    });
+  }, [tokens, searchQuery, featuredAddresses]);
 
   const hasFilters = !!searchQuery;
 
@@ -181,7 +203,11 @@ const Index = () => {
         ) : viewMode === 'grid' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredTokens.map((token) => (
-              <ExpandedTokenCard key={token.id} token={token} />
+              <ExpandedTokenCard 
+                key={token.id} 
+                token={token} 
+                isFeatured={featuredAddresses.has(token.contractAddress.toLowerCase())}
+              />
             ))}
           </div>
         ) : (

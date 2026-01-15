@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { storage } from "./storage";
 import { insertSiteAdSchema, insertVerifiedTokenSchema } from "@shared/schema";
+import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 
 interface DexscreenerPair {
   chainId: string;
@@ -53,7 +54,11 @@ interface RugCheckResponse {
   mintAuthority?: string | null;
 }
 
-export function registerRoutes(app: Express): void {
+export async function registerRoutes(app: Express): Promise<void> {
+  // Setup authentication first
+  await setupAuth(app);
+  registerAuthRoutes(app);
+
   app.get("/api/tokens", async (req, res) => {
     try {
       const page = parseInt(req.query.page as string) || 1;
@@ -502,6 +507,269 @@ export function registerRoutes(app: Express): void {
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to lookup token" });
+    }
+  });
+
+  // Track page views
+  app.post("/api/track-visit", async (req, res) => {
+    try {
+      await storage.trackVisit();
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to track visit" });
+    }
+  });
+
+  // Get featured tokens
+  app.get("/api/featured-tokens", async (req, res) => {
+    try {
+      const tokens = await storage.getFeaturedTokens();
+      res.json(tokens);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch featured tokens" });
+    }
+  });
+
+  // Admin routes - protected by authentication
+  app.get("/api/admin/check", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const admin = await storage.getAdminByUserId(userId);
+      if (!admin) {
+        return res.status(403).json({ error: "Not an admin", isAdmin: false });
+      }
+      res.json({ isAdmin: true, role: admin.role });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to check admin status" });
+    }
+  });
+
+  // Admin: Featured tokens management
+  app.get("/api/admin/featured-tokens", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const admin = await storage.getAdminByUserId(userId);
+      if (!admin) return res.status(403).json({ error: "Not authorized" });
+
+      const tokens = await storage.getFeaturedTokens();
+      res.json(tokens);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch featured tokens" });
+    }
+  });
+
+  app.post("/api/admin/featured-tokens", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const admin = await storage.getAdminByUserId(userId);
+      if (!admin) return res.status(403).json({ error: "Not authorized" });
+
+      const token = await storage.addFeaturedToken(req.body);
+      res.json(token);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to add featured token" });
+    }
+  });
+
+  app.delete("/api/admin/featured-tokens/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const admin = await storage.getAdminByUserId(userId);
+      if (!admin) return res.status(403).json({ error: "Not authorized" });
+
+      await storage.removeFeaturedToken(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to remove featured token" });
+    }
+  });
+
+  // Admin: Ads management
+  app.get("/api/admin/ads", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const admin = await storage.getAdminByUserId(userId);
+      if (!admin) return res.status(403).json({ error: "Not authorized" });
+
+      const ads = await storage.getAllAds();
+      res.json(ads);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch ads" });
+    }
+  });
+
+  app.post("/api/admin/ads", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const admin = await storage.getAdminByUserId(userId);
+      if (!admin) return res.status(403).json({ error: "Not authorized" });
+
+      const validated = insertSiteAdSchema.parse(req.body);
+      const ad = await storage.createAd(validated);
+      res.json(ad);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create ad" });
+    }
+  });
+
+  app.put("/api/admin/ads/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const admin = await storage.getAdminByUserId(userId);
+      if (!admin) return res.status(403).json({ error: "Not authorized" });
+
+      const ad = await storage.updateAd(req.params.id, req.body);
+      res.json(ad);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update ad" });
+    }
+  });
+
+  app.delete("/api/admin/ads/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const admin = await storage.getAdminByUserId(userId);
+      if (!admin) return res.status(403).json({ error: "Not authorized" });
+
+      await storage.deleteAd(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete ad" });
+    }
+  });
+
+  // Admin: Articles management
+  app.get("/api/admin/articles", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const admin = await storage.getAdminByUserId(userId);
+      if (!admin) return res.status(403).json({ error: "Not authorized" });
+
+      const articles = await storage.getAllArticles();
+      res.json(articles);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch articles" });
+    }
+  });
+
+  app.post("/api/admin/articles", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const admin = await storage.getAdminByUserId(userId);
+      if (!admin) return res.status(403).json({ error: "Not authorized" });
+
+      const article = await storage.createArticle({ ...req.body, authorId: userId });
+      res.json(article);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create article" });
+    }
+  });
+
+  app.put("/api/admin/articles/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const admin = await storage.getAdminByUserId(userId);
+      if (!admin) return res.status(403).json({ error: "Not authorized" });
+
+      const article = await storage.updateArticle(req.params.id, req.body);
+      res.json(article);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update article" });
+    }
+  });
+
+  app.delete("/api/admin/articles/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const admin = await storage.getAdminByUserId(userId);
+      if (!admin) return res.status(403).json({ error: "Not authorized" });
+
+      await storage.deleteArticle(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete article" });
+    }
+  });
+
+  // Admin: Visitor stats
+  app.get("/api/admin/visitor-stats", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const admin = await storage.getAdminByUserId(userId);
+      if (!admin) return res.status(403).json({ error: "Not authorized" });
+
+      const stats = await storage.getVisitorStats();
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch visitor stats" });
+    }
+  });
+
+  // Admin: Sub-admin management (super_admin only)
+  app.get("/api/admin/admins", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const admin = await storage.getAdminByUserId(userId);
+      if (!admin || admin.role !== "super_admin") {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+
+      const admins = await storage.getAllAdmins();
+      res.json(admins);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch admins" });
+    }
+  });
+
+  app.post("/api/admin/admins", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const admin = await storage.getAdminByUserId(userId);
+      if (!admin || admin.role !== "super_admin") {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+
+      const newAdmin = await storage.createAdmin({ ...req.body, role: "admin" });
+      res.json(newAdmin);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create admin" });
+    }
+  });
+
+  app.delete("/api/admin/admins/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const admin = await storage.getAdminByUserId(userId);
+      if (!admin || admin.role !== "super_admin") {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+
+      await storage.deleteAdmin(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete admin" });
+    }
+  });
+
+  // Public articles
+  app.get("/api/articles", async (req, res) => {
+    try {
+      const articles = await storage.getPublishedArticles();
+      res.json(articles);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch articles" });
+    }
+  });
+
+  app.get("/api/articles/:slug", async (req, res) => {
+    try {
+      const article = await storage.getArticleBySlug(req.params.slug);
+      if (!article) {
+        return res.status(404).json({ error: "Article not found" });
+      }
+      res.json(article);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch article" });
     }
   });
 }

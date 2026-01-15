@@ -2,6 +2,8 @@ import { pgTable, text, varchar, integer, boolean, numeric, timestamp, uuid } fr
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+export * from "./models/auth";
+
 export const verifiedTokens = pgTable("verified_tokens", {
   id: uuid("id").defaultRandom().primaryKey(),
   tokenName: text("token_name").notNull(),
@@ -77,3 +79,70 @@ export type VerifiedToken = typeof verifiedTokens.$inferSelect;
 export type ScanLog = typeof scanLogs.$inferSelect;
 export type FailedToken = typeof failedTokens.$inferSelect;
 export type SiteAd = typeof siteAds.$inferSelect;
+
+// Admin users table
+export const adminUsers = pgTable("admin_users", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: text("user_id").notNull().unique(),
+  email: text("email"),
+  role: text("role").notNull().default("admin"), // "super_admin" or "admin"
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Featured tokens (manually added by admin)
+export const featuredTokens = pgTable("featured_tokens", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  contractAddress: text("contract_address").notNull().unique(),
+  tokenName: text("token_name").notNull(),
+  tokenSymbol: text("token_symbol").notNull(),
+  imageUrl: text("image_url"),
+  currentPrice: numeric("current_price"),
+  marketCap: numeric("market_cap"),
+  liquidityUsd: numeric("liquidity_usd"),
+  volume24h: numeric("volume_24h"),
+  priceChange24h: numeric("price_change_24h"),
+  dexscreenerUrl: text("dexscreener_url"),
+  displayOrder: integer("display_order").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Visitor statistics
+export const visitorStats = pgTable("visitor_stats", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  date: timestamp("date", { withTimezone: true }).notNull(),
+  visitorCount: integer("visitor_count").default(0),
+  pageViews: integer("page_views").default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Articles/Blog posts
+export const articles = pgTable("articles", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  title: text("title").notNull(),
+  slug: text("slug").notNull().unique(),
+  content: text("content").notNull(),
+  coverImage: text("cover_image"),
+  authorId: text("author_id").notNull(),
+  isPublished: boolean("is_published").default(false),
+  publishedAt: timestamp("published_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertAdminUserSchema = createInsertSchema(adminUsers).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertFeaturedTokenSchema = createInsertSchema(featuredTokens).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertVisitorStatSchema = createInsertSchema(visitorStats).omit({ id: true, createdAt: true });
+export const insertArticleSchema = createInsertSchema(articles).omit({ id: true, createdAt: true, updatedAt: true });
+
+export type InsertAdminUser = z.infer<typeof insertAdminUserSchema>;
+export type InsertFeaturedToken = z.infer<typeof insertFeaturedTokenSchema>;
+export type InsertVisitorStat = z.infer<typeof insertVisitorStatSchema>;
+export type InsertArticle = z.infer<typeof insertArticleSchema>;
+
+export type AdminUser = typeof adminUsers.$inferSelect;
+export type FeaturedToken = typeof featuredTokens.$inferSelect;
+export type VisitorStat = typeof visitorStats.$inferSelect;
+export type Article = typeof articles.$inferSelect;
