@@ -66,3 +66,8 @@ Uses Replit's PostgreSQL database with Drizzle ORM.
 - Added 24h price change tracking with visual indicators (+/-)
 - Created UnifiedSearch component that combines search and contract scanning
 - Enhanced token cards with avatars, trending indicators, and improved layout
+- Added social links (X, Telegram) and Solana donation address in header
+- Implemented auto-scan every 5 minutes with countdown timer
+- Added glowing NEW badge for tokens less than 1 hour old
+- Added Chart button on each token card linking to DexScreener
+- Added LIVE indicator on each token card
