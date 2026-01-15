@@ -31,7 +31,8 @@ import {
   Eye,
   EyeOff,
   ArrowLeft,
-  Lock
+  Lock,
+  ExternalLink
 } from 'lucide-react';
 import { queryClient } from '@/lib/queryClient';
 
@@ -368,13 +369,22 @@ function AdsPanel() {
             </div>
           </div>
           <div>
-            <Label>Content</Label>
+            <Label>Content (supports HTML, CSS, and JavaScript)</Label>
             <Textarea
               value={newAd.content}
               onChange={(e) => setNewAd({ ...newAd, content: e.target.value })}
-              placeholder="<div style='background: linear-gradient(...); padding: 20px;'>Your attractive ad content</div>"
+              placeholder={`<script>
+  // Your JavaScript ad code here
+  console.log('Ad loaded');
+</script>
+<div style="background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 20px; border-radius: 8px;">
+  <p style="color: #22c55e;">Your ad content</p>
+</div>`}
               className="min-h-[150px] font-mono text-sm"
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              Example: &lt;script&gt;...your ad script...&lt;/script&gt;
+            </p>
           </div>
           <Button 
             onClick={() => createMutation.mutate(newAd)} 
@@ -561,28 +571,36 @@ function ArticlesPanel() {
           ) : (
             <div className="space-y-4">
               {articles?.map((article: any) => (
-                <div key={article.id} className="flex items-center justify-between p-4 border rounded-lg gap-4">
-                  <div className="flex items-center gap-4">
-                    <Badge variant={article.isPublished ? 'default' : 'secondary'}>
-                      {article.isPublished ? 'Published' : 'Draft'}
-                    </Badge>
-                    <div>
+                <div key={article.id} className="p-4 border rounded-lg space-y-3">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      <Badge variant={article.isPublished ? 'default' : 'secondary'}>
+                        {article.isPublished ? 'Published' : 'Draft'}
+                      </Badge>
                       <p className="font-medium">{article.title}</p>
-                      <p className="text-sm text-muted-foreground">/{article.slug}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleMutation.mutate({ id: article.id, isPublished: !article.isPublished })}
+                      >
+                        {article.isPublished ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                      </Button>
+                      <Button variant="destructive" size="sm" onClick={() => deleteMutation.mutate(article.id)}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => toggleMutation.mutate({ id: article.id, isPublished: !article.isPublished })}
-                    >
-                      {article.isPublished ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                    </Button>
-                    <Button variant="destructive" size="sm" onClick={() => deleteMutation.mutate(article.id)}>
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
+                  <a 
+                    href={`/articles/${article.slug}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-primary hover:underline text-sm font-mono bg-primary/10 px-3 py-2 rounded-lg w-fit"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    /articles/{article.slug}
+                  </a>
                 </div>
               ))}
             </div>

@@ -156,40 +156,40 @@ export function UnifiedSearch({ onSearch, searchQuery }: UnifiedSearchProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            value={inputValue}
-            onChange={(e) => handleInputChange(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Search by name, symbol, or enter contract address to scan..."
-            className="pl-10 pr-10 font-mono text-sm h-12 bg-card border-border focus:border-primary"
-            data-testid="input-unified-search"
-          />
+      <div className="relative">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+        <Input
+          value={inputValue}
+          onChange={(e) => handleInputChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Search by name, symbol, or enter contract address to scan..."
+          className="pl-12 pr-24 font-mono text-sm h-14 bg-card border-border focus:border-primary rounded-xl"
+          data-testid="input-unified-search"
+        />
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
           {inputValue && (
             <button
               onClick={handleClear}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground rounded hover-elevate"
+              className="p-2 text-muted-foreground rounded-lg hover-elevate"
               data-testid="button-clear-search"
             >
               <X className="w-4 h-4" />
             </button>
           )}
+          <Button 
+            onClick={handleSearch} 
+            disabled={loading}
+            size="icon"
+            className="h-10 w-10 rounded-lg"
+            data-testid="button-search"
+          >
+            {loading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Search className="w-5 h-5" />
+            )}
+          </Button>
         </div>
-        <Button 
-          onClick={handleSearch} 
-          disabled={loading}
-          size="lg"
-          className="h-12 px-6"
-          data-testid="button-search"
-        >
-          {loading ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
-          ) : (
-            <Search className="w-5 h-5" />
-          )}
-        </Button>
       </div>
 
       {scannedToken && (
