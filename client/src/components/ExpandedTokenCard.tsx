@@ -280,14 +280,13 @@ export function ExpandedTokenCard({ token, isNew, isFeatured }: ExpandedTokenCar
             </div>
             
             <Button
-              size="sm"
-              variant="outline"
+              size="icon"
+              variant="ghost"
               onClick={() => setChartOpen(!chartOpen)}
-              className="border-primary/50"
+              className={`h-7 w-7 ${chartOpen ? 'text-primary' : ''}`}
               data-testid="button-chart"
             >
-              <BarChart3 className="w-3 h-3 mr-1" />
-              {chartOpen ? 'Hide' : 'Chart'}
+              <BarChart3 className="w-4 h-4" />
             </Button>
           </div>
 

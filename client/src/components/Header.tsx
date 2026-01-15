@@ -1,4 +1,4 @@
-import { Activity, RefreshCw, Copy } from 'lucide-react';
+import { Activity, RefreshCw } from 'lucide-react';
 import { FaXTwitter, FaTelegram } from 'react-icons/fa6';
 import { SiSolana } from 'react-icons/si';
 import { Button } from '@/components/ui/button';
@@ -66,8 +66,17 @@ export function Header({ tokenCount, lastScan, onManualScan, isScanning, nextSca
 
           {/* Actions */}
           <div className="flex items-center gap-2">
-            {/* Social Links */}
+            {/* Social Links & Donate */}
             <div className="hidden sm:flex items-center gap-1">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={copyDonationAddress}
+                className="text-[#14F195] active:scale-95 transition-transform"
+                data-testid="button-copy-donation"
+              >
+                <SiSolana className="w-5 h-5" />
+              </Button>
               <Button variant="ghost" size="icon" asChild>
                 <a
                   href={TWITTER_URL}
@@ -105,41 +114,6 @@ export function Header({ tokenCount, lastScan, onManualScan, isScanning, nextSca
               {isScanning ? 'Scanning...' : nextScanIn ? `Next: ${formatCountdown(nextScanIn)}` : 'Scan Now'}
             </Button>
           </div>
-        </div>
-        
-        {/* Donation Bar */}
-        <div className="flex items-center justify-center gap-3 mt-2 pt-2 border-t border-border/50">
-          <Button
-            onClick={copyDonationAddress}
-            className="bg-gradient-to-r from-[#14F195] to-[#9945FF] hover:from-[#14F195]/90 hover:to-[#9945FF]/90 text-black font-semibold border-0 gap-2"
-            data-testid="button-copy-donation"
-          >
-            <SiSolana className="w-4 h-4" />
-            <span>Donate</span>
-            <Copy className="w-3.5 h-3.5" />
-          </Button>
-          
-          <Button variant="ghost" size="icon" asChild>
-            <a
-              href={TWITTER_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              data-testid="link-donation-twitter"
-            >
-              <FaXTwitter className="w-5 h-5" />
-            </a>
-          </Button>
-          <Button variant="ghost" size="icon" asChild>
-            <a
-              href={TELEGRAM_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sky-500"
-              data-testid="link-donation-telegram"
-            >
-              <FaTelegram className="w-5 h-5" />
-            </a>
-          </Button>
         </div>
       </div>
     </header>

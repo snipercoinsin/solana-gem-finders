@@ -18,9 +18,11 @@ export function formatCompact(num: number | string | null): string {
   return n.toFixed(2);
 }
 
-export function formatTimeAgo(date: string): string {
+export function formatTimeAgo(date: string | null | undefined): string {
+  if (!date) return 'Just now';
   const now = new Date();
   const past = new Date(date);
+  if (isNaN(past.getTime())) return 'Just now';
   const diffMs = now.getTime() - past.getTime();
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMins / 60);
