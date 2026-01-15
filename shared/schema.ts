@@ -21,6 +21,8 @@ export const verifiedTokens = pgTable("verified_tokens", {
   buyTax: numeric("buy_tax"),
   sellTax: numeric("sell_tax"),
   safetyScore: integer("safety_score").default(0),
+  imageUrl: text("image_url"),
+  priceChange24h: numeric("price_change_24h"),
   dexscreenerUrl: text("dexscreener_url"),
   solscanUrl: text("solscan_url"),
   rugcheckUrl: text("rugcheck_url"),

@@ -26,6 +26,7 @@ interface DexscreenerPair {
   pairCreatedAt: number;
   url: string;
   info?: {
+    imageUrl?: string;
     websites?: { url: string }[];
     socials?: { type: string; url: string }[];
   };
@@ -184,6 +185,8 @@ export function registerRoutes(app: Express): void {
               marketCap: pair.fdv?.toString() || null,
               liquidityUsd: pair.liquidity?.usd?.toString() || null,
               volume24h: pair.volume?.h24?.toString() || null,
+              imageUrl: pair.info?.imageUrl || existing.imageUrl || null,
+              priceChange24h: pair.priceChange?.h24?.toString() || null,
             });
 
             continue;
@@ -290,6 +293,8 @@ export function registerRoutes(app: Express): void {
             buyTax: buyTax.toString(),
             sellTax: sellTax.toString(),
             safetyScore: safetyScore,
+            imageUrl: pair.info?.imageUrl || null,
+            priceChange24h: pair.priceChange?.h24?.toString() || null,
             dexscreenerUrl: pair.url,
             solscanUrl: `https://solscan.io/token/${contractAddress}`,
             rugcheckUrl: `https://rugcheck.xyz/tokens/${contractAddress}`,
@@ -476,10 +481,16 @@ export function registerRoutes(app: Express): void {
           liquidityUsd: pair.liquidity?.usd,
           volume24h: pair.volume?.h24,
           liquidityLocked: liquidityLocked || false,
+          liquidityLockDurationMonths: liquidityLocked ? 6 : null,
           ownershipRenounced: ownershipRenounced,
           honeypotSafe: !hasHighRisks,
+          contractVerified: true,
+          buyTax: "0",
+          sellTax: "0",
           safetyScore: safetyScore,
           safetyReasons: safetyReasons,
+          imageUrl: pair.info?.imageUrl || null,
+          priceChange24h: pair.priceChange?.h24,
           dexscreenerUrl: pair.url,
           solscanUrl: `https://solscan.io/token/${contractAddress}`,
           rugcheckUrl: `https://rugcheck.xyz/tokens/${contractAddress}`,

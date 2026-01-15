@@ -2,6 +2,7 @@ import { VerifiedToken } from '@/hooks/useVerifiedTokens';
 import { formatPrice, formatCompact, formatTimeAgo, truncateAddress } from '@/lib/formatters';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   ExternalLink, 
   Copy, 
@@ -10,7 +11,9 @@ import {
   CheckCircle, 
   Twitter,
   Send,
-  Globe
+  Globe,
+  TrendingUp,
+  TrendingDown
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -33,30 +36,55 @@ export function ExpandedTokenCard({ token, isNew }: ExpandedTokenCardProps) {
     return now.getTime() - launchTime.getTime() < 3600000;
   };
 
+  const priceChange = token.priceChange24h ? parseFloat(token.priceChange24h.toString()) : null;
+  const isPositiveChange = priceChange !== null && priceChange >= 0;
+
   return (
     <Card 
       className={`border-border bg-card hover:border-primary/50 transition-all ${
         isNew ? 'pulse-new' : ''
       } ${isRecent() ? 'border-primary/30' : ''}`}
+      data-testid={`card-token-${token.id}`}
     >
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {isRecent() && (
-              <Badge className="bg-primary text-primary-foreground text-[10px] px-1.5">
-                NEW
-              </Badge>
-            )}
-            <span className="text-lg font-bold text-foreground glow-green">
-              {token.tokenSymbol}
-            </span>
-            <span className="text-muted-foreground text-sm">
-              {token.tokenName}
-            </span>
+          <div className="flex items-center gap-3">
+            <Avatar className="h-10 w-10 border border-border">
+              <AvatarImage 
+                src={token.imageUrl || undefined} 
+                alt={token.tokenSymbol} 
+              />
+              <AvatarFallback className="bg-primary/20 text-primary text-xs font-bold">
+                {token.tokenSymbol.slice(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                {isRecent() && (
+                  <Badge className="bg-primary text-primary-foreground text-[10px] px-1.5">
+                    NEW
+                  </Badge>
+                )}
+                <span className="text-lg font-bold text-foreground glow-green">
+                  {token.tokenSymbol}
+                </span>
+              </div>
+              <span className="text-muted-foreground text-xs">
+                {token.tokenName}
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-1">
-            <Shield className="w-4 h-4 text-primary" />
-            <span className="text-primary font-bold">{token.safetyScore}%</span>
+          <div className="flex flex-col items-end gap-1">
+            <div className="flex items-center gap-1">
+              <Shield className="w-4 h-4 text-primary" />
+              <span className="text-primary font-bold">{token.safetyScore}%</span>
+            </div>
+            {priceChange !== null && (
+              <div className={`flex items-center gap-1 text-xs ${isPositiveChange ? 'text-green-500' : 'text-red-500'}`}>
+                {isPositiveChange ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                {isPositiveChange ? '+' : ''}{priceChange.toFixed(1)}%
+              </div>
+            )}
           </div>
         </div>
       </CardHeader>
@@ -89,6 +117,7 @@ export function ExpandedTokenCard({ token, isNew }: ExpandedTokenCardProps) {
             <button
               onClick={copyAddress}
               className="p-1 hover:text-primary transition-colors"
+              data-testid="button-copy-address"
             >
               <Copy className="w-3 h-3" />
             </button>
@@ -98,6 +127,7 @@ export function ExpandedTokenCard({ token, isNew }: ExpandedTokenCardProps) {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-1 hover:text-primary transition-colors"
+                data-testid="link-dexscreener"
               >
                 <ExternalLink className="w-3 h-3" />
               </a>
@@ -149,6 +179,7 @@ export function ExpandedTokenCard({ token, isNew }: ExpandedTokenCardProps) {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"
+                data-testid="link-twitter"
               >
                 <Twitter className="w-3 h-3" /> Twitter
               </a>
@@ -159,6 +190,7 @@ export function ExpandedTokenCard({ token, isNew }: ExpandedTokenCardProps) {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-secondary"
+                data-testid="link-telegram"
               >
                 <Send className="w-3 h-3" /> Telegram
               </a>
@@ -169,6 +201,7 @@ export function ExpandedTokenCard({ token, isNew }: ExpandedTokenCardProps) {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-accent"
+                data-testid="link-website"
               >
                 <Globe className="w-3 h-3" /> Website
               </a>
@@ -196,6 +229,7 @@ export function ExpandedTokenCard({ token, isNew }: ExpandedTokenCardProps) {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs text-muted-foreground hover:text-primary underline"
+                data-testid="link-solscan"
               >
                 Solscan
               </a>
@@ -206,6 +240,7 @@ export function ExpandedTokenCard({ token, isNew }: ExpandedTokenCardProps) {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs text-muted-foreground hover:text-primary underline"
+                data-testid="link-rugcheck"
               >
                 RugCheck
               </a>

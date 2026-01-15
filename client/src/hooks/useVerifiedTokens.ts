@@ -20,6 +20,8 @@ export interface VerifiedToken {
   buyTax: string | null;
   sellTax: string | null;
   safetyScore: number;
+  imageUrl: string | null;
+  priceChange24h: string | null;
   dexscreenerUrl: string | null;
   solscanUrl: string | null;
   rugcheckUrl: string | null;

@@ -1,16 +1,17 @@
 import { useState, useMemo } from 'react';
 import { Header } from '@/components/Header';
-import { FilterBar } from '@/components/FilterBar';
 import { ExpandedTokenCard } from '@/components/ExpandedTokenCard';
 import { TokenTable } from '@/components/TokenTable';
 import { StatusBar } from '@/components/StatusBar';
 import { EmptyState } from '@/components/EmptyState';
-import { ContractLookup } from '@/components/ContractLookup';
+import { UnifiedSearch } from '@/components/UnifiedSearch';
 import { AdDisplay } from '@/components/AdDisplay';
 import { useVerifiedTokens } from '@/hooks/useVerifiedTokens';
 import { useScanLogs } from '@/hooks/useScanLogs';
 import { formatTimeAgo } from '@/lib/formatters';
 import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { Grid, List } from 'lucide-react';
 import {
   Pagination,
   PaginationContent,
@@ -106,16 +107,37 @@ const Index = () => {
         isScanning={isScanning}
       />
 
-      <main className="flex-1 container mx-auto px-4 py-6 space-y-4">
-        {/* Contract Lookup */}
-        <ContractLookup />
-        
-        <FilterBar
+      <main className="flex-1 container mx-auto px-4 py-6 space-y-6">
+        <UnifiedSearch
+          onSearch={setSearchQuery}
           searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
         />
+        
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            {searchQuery ? `${filteredTokens.length} results for "${searchQuery}"` : `${totalCount} verified tokens`}
+          </p>
+          <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+            <Button
+              variant={viewMode === 'grid' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('grid')}
+              className="h-8 w-8 p-0"
+              data-testid="button-view-grid"
+            >
+              <Grid className="w-4 h-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'table' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('table')}
+              className="h-8 w-8 p-0"
+              data-testid="button-view-table"
+            >
+              <List className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
 
         {filteredTokens.length === 0 ? (
           <EmptyState
@@ -133,7 +155,6 @@ const Index = () => {
           <TokenTable tokens={filteredTokens} />
         )}
 
-        {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex flex-col items-center gap-4 pt-4">
             <p className="text-sm text-muted-foreground">
