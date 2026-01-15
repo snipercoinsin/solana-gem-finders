@@ -56,7 +56,7 @@ export function TokenTable({ tokens }: TokenTableProps) {
 
   const SortHeader = ({ label, sortKeyName }: { label: string; sortKeyName: SortKey }) => (
     <TableHead 
-      className="cursor-pointer hover:text-primary transition-colors"
+      className="cursor-pointer hover-elevate"
       onClick={() => handleSort(sortKeyName)}
     >
       {label} {sortKey === sortKeyName && (sortOrder === 'desc' ? '↓' : '↑')}
@@ -67,7 +67,7 @@ export function TokenTable({ tokens }: TokenTableProps) {
     <div className="border border-border rounded-lg overflow-hidden">
       <Table>
         <TableHeader>
-          <TableRow className="border-border hover:bg-transparent">
+          <TableRow className="border-border">
             <TableHead>Token</TableHead>
             <TableHead>Contract</TableHead>
             <SortHeader label="Price" sortKeyName="marketCap" />
@@ -105,7 +105,7 @@ export function TokenTable({ tokens }: TokenTableProps) {
                   </code>
                   <button
                     onClick={() => copyAddress(token.contractAddress)}
-                    className="p-0.5 hover:text-primary transition-colors"
+                    className="p-0.5 rounded hover-elevate"
                   >
                     <Copy className="w-3 h-3" />
                   </button>
@@ -154,7 +154,7 @@ export function TokenTable({ tokens }: TokenTableProps) {
                       href={token.dexscreenerUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="p-1 hover:text-primary transition-colors"
+                      className="p-1 rounded hover-elevate"
                       title="Dexscreener"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />

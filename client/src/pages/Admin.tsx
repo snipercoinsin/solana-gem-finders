@@ -33,9 +33,27 @@ import {
   ArrowLeft,
   Lock
 } from 'lucide-react';
-import { apiRequest, queryClient } from '@/lib/queryClient';
+import { queryClient } from '@/lib/queryClient';
 
 const ADMIN_PASSWORD_HASH = 'U3BsaW50ZXJLaGF5cm9EYXJrRFowMDMzNiM=';
+
+async function adminApiRequest(url: string, options?: RequestInit): Promise<any> {
+  const res = await fetch(url, {
+    ...options,
+    headers: { 
+      "Content-Type": "application/json", 
+      "X-Admin-Auth": ADMIN_PASSWORD_HASH,
+      ...options?.headers 
+    },
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const text = (await res.text()) || res.statusText;
+    throw new Error(`${res.status}: ${text}`);
+  }
+  return await res.json();
+}
 
 export default function Admin() {
   const { toast } = useToast();
@@ -197,6 +215,7 @@ interface VisitorStats {
 function VisitorStatsPanel() {
   const { data: stats, isLoading } = useQuery<VisitorStats>({
     queryKey: ['/api/admin/visitor-stats'],
+    queryFn: () => adminApiRequest('/api/admin/visitor-stats'),
   });
 
   if (isLoading) {
@@ -259,7 +278,10 @@ interface Ad {
 
 function AdsPanel() {
   const { toast } = useToast();
-  const { data: ads, isLoading } = useQuery<Ad[]>({ queryKey: ['/api/admin/ads'] });
+  const { data: ads, isLoading } = useQuery<Ad[]>({ 
+    queryKey: ['/api/admin/ads'],
+    queryFn: () => adminApiRequest('/api/admin/ads'),
+  });
   const [newAd, setNewAd] = useState({
     position: 'top',
     contentType: 'html',
@@ -268,7 +290,7 @@ function AdsPanel() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => apiRequest('/api/admin/ads', { method: 'POST', body: JSON.stringify(data) }),
+    mutationFn: (data: any) => adminApiRequest('/api/admin/ads', { method: 'POST', body: JSON.stringify(data) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/ads'] });
       queryClient.invalidateQueries({ queryKey: ['/api/ads'] });
@@ -281,7 +303,7 @@ function AdsPanel() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`/api/admin/ads/${id}`, { method: 'DELETE' }),
+    mutationFn: (id: string) => adminApiRequest(`/api/admin/ads/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/ads'] });
       queryClient.invalidateQueries({ queryKey: ['/api/ads'] });
@@ -291,7 +313,7 @@ function AdsPanel() {
 
   const toggleMutation = useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
-      apiRequest(`/api/admin/ads/${id}`, { method: 'PUT', body: JSON.stringify({ isActive }) }),
+      adminApiRequest(`/api/admin/ads/${id}`, { method: 'PUT', body: JSON.stringify({ isActive }) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/ads'] });
       queryClient.invalidateQueries({ queryKey: ['/api/ads'] });
@@ -414,7 +436,10 @@ interface Article {
 
 function ArticlesPanel() {
   const { toast } = useToast();
-  const { data: articles, isLoading } = useQuery<Article[]>({ queryKey: ['/api/admin/articles'] });
+  const { data: articles, isLoading } = useQuery<Article[]>({ 
+    queryKey: ['/api/admin/articles'],
+    queryFn: () => adminApiRequest('/api/admin/articles'),
+  });
   const [newArticle, setNewArticle] = useState({
     title: '',
     slug: '',
@@ -424,7 +449,7 @@ function ArticlesPanel() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => apiRequest('/api/admin/articles', { method: 'POST', body: JSON.stringify(data) }),
+    mutationFn: (data: any) => adminApiRequest('/api/admin/articles', { method: 'POST', body: JSON.stringify(data) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/articles'] });
       toast({ description: 'Article created' });
@@ -436,7 +461,7 @@ function ArticlesPanel() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`/api/admin/articles/${id}`, { method: 'DELETE' }),
+    mutationFn: (id: string) => adminApiRequest(`/api/admin/articles/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/articles'] });
       toast({ description: 'Article deleted' });
@@ -445,7 +470,7 @@ function ArticlesPanel() {
 
   const toggleMutation = useMutation({
     mutationFn: ({ id, isPublished }: { id: string; isPublished: boolean }) =>
-      apiRequest(`/api/admin/articles/${id}`, { 
+      adminApiRequest(`/api/admin/articles/${id}`, { 
         method: 'PUT', 
         body: JSON.stringify({ isPublished, publishedAt: isPublished ? new Date().toISOString() : null }) 
       }),
@@ -578,7 +603,10 @@ interface FeaturedToken {
 
 function FeaturedTokensPanel() {
   const { toast } = useToast();
-  const { data: tokens, isLoading } = useQuery<FeaturedToken[]>({ queryKey: ['/api/admin/featured-tokens'] });
+  const { data: tokens, isLoading } = useQuery<FeaturedToken[]>({ 
+    queryKey: ['/api/admin/featured-tokens'],
+    queryFn: () => adminApiRequest('/api/admin/featured-tokens'),
+  });
   const [newToken, setNewToken] = useState({
     contractAddress: '',
     tokenName: '',
@@ -589,7 +617,7 @@ function FeaturedTokensPanel() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => apiRequest('/api/admin/featured-tokens', { method: 'POST', body: JSON.stringify(data) }),
+    mutationFn: (data: any) => adminApiRequest('/api/admin/featured-tokens', { method: 'POST', body: JSON.stringify(data) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/featured-tokens'] });
       queryClient.invalidateQueries({ queryKey: ['/api/featured-tokens'] });
@@ -602,7 +630,7 @@ function FeaturedTokensPanel() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`/api/admin/featured-tokens/${id}`, { method: 'DELETE' }),
+    mutationFn: (id: string) => adminApiRequest(`/api/admin/featured-tokens/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/featured-tokens'] });
       queryClient.invalidateQueries({ queryKey: ['/api/featured-tokens'] });
@@ -728,11 +756,14 @@ interface AdminUser {
 
 function AdminsPanel() {
   const { toast } = useToast();
-  const { data: admins, isLoading } = useQuery<AdminUser[]>({ queryKey: ['/api/admin/admins'] });
+  const { data: admins, isLoading } = useQuery<AdminUser[]>({ 
+    queryKey: ['/api/admin/admins'],
+    queryFn: () => adminApiRequest('/api/admin/admins'),
+  });
   const [newAdmin, setNewAdmin] = useState({ userId: '', email: '' });
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => apiRequest('/api/admin/admins', { method: 'POST', body: JSON.stringify(data) }),
+    mutationFn: (data: any) => adminApiRequest('/api/admin/admins', { method: 'POST', body: JSON.stringify(data) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/admins'] });
       toast({ description: 'Sub-admin added' });
@@ -744,7 +775,7 @@ function AdminsPanel() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`/api/admin/admins/${id}`, { method: 'DELETE' }),
+    mutationFn: (id: string) => adminApiRequest(`/api/admin/admins/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/admins'] });
       toast({ description: 'Admin removed' });

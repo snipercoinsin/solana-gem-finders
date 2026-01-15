@@ -105,20 +105,22 @@ All colors MUST be HSL.
   }
 }
 
-/* Glowing NEW badge animation */
-@keyframes glow-pulse {
+/* Glowing NEW badge animation - Blue Radial */
+@keyframes blue-glow-pulse {
   0%, 100% {
-    box-shadow: 0 0 5px hsl(var(--primary)), 0 0 10px hsl(var(--primary)), 0 0 15px hsl(var(--primary));
+    box-shadow: 0 0 8px hsl(217 91% 60%), 0 0 16px hsl(217 91% 60%), 0 0 24px hsl(213 94% 68%);
   }
   50% {
-    box-shadow: 0 0 10px hsl(var(--primary)), 0 0 20px hsl(var(--primary)), 0 0 30px hsl(var(--primary));
+    box-shadow: 0 0 12px hsl(217 91% 60%), 0 0 24px hsl(217 91% 60%), 0 0 36px hsl(213 94% 68%);
   }
 }
 
 .badge-new-glow {
-  animation: glow-pulse 1.5s ease-in-out infinite;
-  background: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
+  animation: blue-glow-pulse 1.5s ease-in-out infinite;
+  background: radial-gradient(circle at 30% 30%, hsl(213 94% 68%), hsl(217 91% 60%), hsl(224 76% 48%));
+  color: hsl(0 0% 100%);
+  font-weight: 700;
+  text-shadow: 0 1px 2px hsl(0 0% 0% / 0.3);
 }
 
 /* Glow text effect */

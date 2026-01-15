@@ -17,9 +17,12 @@ import {
   TrendingDown,
   BarChart3,
   Activity,
-  Flame
+  Flame,
+  Search,
+  ShieldCheck
 } from 'lucide-react';
 import { FaXTwitter, FaTelegram } from 'react-icons/fa6';
+import { SiSolana } from 'react-icons/si';
 import { useToast } from '@/hooks/use-toast';
 
 interface ExpandedTokenCardProps {
@@ -48,7 +51,7 @@ export function ExpandedTokenCard({ token, isNew, isFeatured }: ExpandedTokenCar
 
   return (
     <Card 
-      className={`border-border bg-card hover:border-primary/50 transition-all ${
+      className={`border-border bg-card hover-elevate ${
         isNew ? 'pulse-new' : ''
       } ${isRecent() ? 'border-primary/30' : ''} ${isFeatured ? 'border-orange-500/50 ring-1 ring-orange-500/30' : ''}`}
       data-testid={`card-token-${token.id}`}
@@ -56,24 +59,26 @@ export function ExpandedTokenCard({ token, isNew, isFeatured }: ExpandedTokenCar
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10 border border-border">
-              <AvatarImage 
-                src={token.imageUrl || undefined} 
-                alt={token.tokenSymbol} 
-              />
-              <AvatarFallback className="bg-primary/20 text-primary text-xs font-bold">
-                {token.tokenSymbol.slice(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative">
+              <Avatar className="h-10 w-10 border border-border">
+                <AvatarImage 
+                  src={token.imageUrl || undefined} 
+                  alt={token.tokenSymbol} 
+                />
+                <AvatarFallback className="bg-primary/20 text-primary text-xs font-bold">
+                  {token.tokenSymbol.slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              {isRecent() && (
+                <Badge className="badge-new-glow text-[8px] px-1 py-0 absolute -top-1 -right-1 rounded-sm">
+                  NEW
+                </Badge>
+              )}
+            </div>
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
                 {isFeatured && (
                   <Flame className="w-4 h-4 text-orange-500 animate-pulse" />
-                )}
-                {isRecent() && (
-                  <Badge className="badge-new-glow text-[10px] px-1.5 py-0.5 font-bold">
-                    NEW
-                  </Badge>
                 )}
                 <span className="text-lg font-bold text-foreground glow-green">
                   {token.tokenSymbol}
@@ -130,7 +135,7 @@ export function ExpandedTokenCard({ token, isNew, isFeatured }: ExpandedTokenCar
           <div className="flex items-center gap-1">
             <button
               onClick={copyAddress}
-              className="p-1 hover:text-primary transition-colors"
+              className="p-1 rounded hover-elevate"
               data-testid="button-copy-address"
             >
               <Copy className="w-3 h-3" />
@@ -140,7 +145,7 @@ export function ExpandedTokenCard({ token, isNew, isFeatured }: ExpandedTokenCar
                 href={token.dexscreenerUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="p-1 hover:text-primary transition-colors"
+                className="p-1 rounded hover-elevate"
                 data-testid="link-dexscreener"
               >
                 <ExternalLink className="w-3 h-3" />
@@ -192,7 +197,7 @@ export function ExpandedTokenCard({ token, isNew, isFeatured }: ExpandedTokenCar
                 href={token.twitterUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                className="flex items-center gap-1 text-xs text-muted-foreground rounded px-1 hover-elevate"
                 data-testid="link-twitter"
               >
                 <FaXTwitter className="w-3 h-3" /> Twitter
@@ -203,10 +208,10 @@ export function ExpandedTokenCard({ token, isNew, isFeatured }: ExpandedTokenCar
                 href={token.telegramUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-[#0088cc] transition-colors"
+                className="flex items-center gap-1 text-xs text-muted-foreground rounded px-1 hover-elevate"
                 data-testid="link-telegram"
               >
-                <FaTelegram className="w-3 h-3" /> Telegram
+                <FaTelegram className="w-3 h-3 text-sky-500" /> Telegram
               </a>
             )}
             {token.websiteUrl && (
@@ -214,7 +219,7 @@ export function ExpandedTokenCard({ token, isNew, isFeatured }: ExpandedTokenCar
                 href={token.websiteUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-accent"
+                className="flex items-center gap-1 text-xs text-muted-foreground rounded px-1 hover-elevate"
                 data-testid="link-website"
               >
                 <Globe className="w-3 h-3" /> Website
@@ -237,16 +242,17 @@ export function ExpandedTokenCard({ token, isNew, isFeatured }: ExpandedTokenCar
           )}
 
           <div className="flex items-center justify-between pt-1">
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               {token.solscanUrl && (
                 <a
                   href={token.solscanUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-muted-foreground hover:text-primary underline"
+                  className="flex items-center gap-1 text-xs text-muted-foreground rounded px-1 hover-elevate"
                   data-testid="link-solscan"
                 >
-                  Solscan
+                  <SiSolana className="w-3 h-3 text-violet-500" />
+                  <span>Solscan</span>
                 </a>
               )}
               {token.rugcheckUrl && (
@@ -254,10 +260,11 @@ export function ExpandedTokenCard({ token, isNew, isFeatured }: ExpandedTokenCar
                   href={token.rugcheckUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-muted-foreground hover:text-primary underline"
+                  className="flex items-center gap-1 text-xs text-muted-foreground rounded px-1 hover-elevate"
                   data-testid="link-rugcheck"
                 >
-                  RugCheck
+                  <ShieldCheck className="w-3 h-3 text-primary" />
+                  <span>RugCheck</span>
                 </a>
               )}
               {token.dexscreenerUrl && (
@@ -265,9 +272,10 @@ export function ExpandedTokenCard({ token, isNew, isFeatured }: ExpandedTokenCar
                   href={token.dexscreenerUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-muted-foreground hover:text-primary underline"
+                  className="flex items-center gap-1 text-xs text-muted-foreground rounded px-1 hover-elevate"
                 >
-                  Dexscreener
+                  <Search className="w-3 h-3 text-primary" />
+                  <span>Dexscreener</span>
                 </a>
               )}
             </div>

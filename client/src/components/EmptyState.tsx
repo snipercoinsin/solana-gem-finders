@@ -40,7 +40,7 @@ export function EmptyState({ isLoading, hasFilters, onScan }: EmptyStateProps) {
         The scanner is waiting to find new Solana tokens that pass all safety checks. 
         Run a manual scan or wait for the automated scanner.
       </p>
-      <Button onClick={onScan} className="bg-primary hover:bg-primary/90">
+      <Button onClick={onScan}>
         <RefreshCw className="w-4 h-4 mr-2" />
         Start Scanning
       </Button>

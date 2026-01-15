@@ -169,7 +169,7 @@ export function UnifiedSearch({ onSearch, searchQuery }: UnifiedSearchProps) {
           {inputValue && (
             <button
               onClick={handleClear}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground rounded hover-elevate"
               data-testid="button-clear-search"
             >
               <X className="w-4 h-4" />
@@ -396,7 +396,7 @@ export function UnifiedSearch({ onSearch, searchQuery }: UnifiedSearchProps) {
                       href={scannedToken.solscanUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-muted-foreground hover:text-primary underline"
+                      className="text-xs text-muted-foreground underline rounded px-1 hover-elevate"
                     >
                       Solscan
                     </a>
@@ -406,7 +406,7 @@ export function UnifiedSearch({ onSearch, searchQuery }: UnifiedSearchProps) {
                       href={scannedToken.rugcheckUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-muted-foreground hover:text-primary underline"
+                      className="text-xs text-muted-foreground underline rounded px-1 hover-elevate"
                     >
                       RugCheck
                     </a>
@@ -416,7 +416,7 @@ export function UnifiedSearch({ onSearch, searchQuery }: UnifiedSearchProps) {
                       href={scannedToken.dexscreenerUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-muted-foreground hover:text-primary underline"
+                      className="text-xs text-muted-foreground underline rounded px-1 hover-elevate"
                     >
                       Dexscreener
                     </a>

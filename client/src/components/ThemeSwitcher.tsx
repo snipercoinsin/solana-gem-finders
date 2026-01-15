@@ -77,14 +77,14 @@ export function ThemeSwitcher() {
         variant="outline"
         size="sm"
         onClick={toggleDarkMode}
-        className="border-primary/50 hover:bg-primary/10"
+        className="border-primary/50"
       >
         {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
       </Button>
       
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="border-primary/50 hover:bg-primary/10">
+          <Button variant="outline" size="sm" className="border-primary/50">
             <Palette className="w-4 h-4 mr-2" />
             <span className="hidden sm:inline">{currentThemeName}</span>
           </Button>

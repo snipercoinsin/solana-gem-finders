@@ -82,16 +82,19 @@ Uses Replit's PostgreSQL database with Drizzle ORM.
 - Enhanced token cards with avatars, trending indicators, and improved layout
 - Added social links (X, Telegram) and Solana donation address in header
 - Implemented auto-scan every 5 minutes with countdown timer
-- Added glowing NEW badge for tokens less than 1 hour old
+- Added glowing NEW badge for tokens less than 1 hour old (blue radial gradient)
 - Added Chart button on each token card linking to DexScreener
 - Added LIVE indicator on each token card
-- Integrated Replit Auth for admin authentication
-- Added role-based access control (super_admin vs admin)
+- Migrated admin auth from Replit Auth to password-based authentication
+- Admin routes now protected by server-side password verification (X-Admin-Auth header)
 - Created full admin dashboard with tabs (Stats, Ads, Articles, Featured, Admins)
 - Added featured tokens system with fire icon display and priority ordering
 - Implemented visitor tracking with daily/weekly/monthly/yearly/total stats
 - Added HTML/CSS/JS support for ads and articles
 - Added sub-admin management (super_admin only)
+- Updated all hover effects to use hover-elevate utility (guideline compliant)
+- Added proper icons: SiSolana (violet) for header/links, FaXTwitter, FaTelegram (sky-500)
+- Removed unused TokenCard.tsx component (legacy code)
 
 ## Admin Dashboard Features
 - **Stats Tab**: View visitor statistics (today, week, month, year, total)
@@ -103,8 +106,14 @@ Uses Replit's PostgreSQL database with Drizzle ORM.
 ## Authentication
 Admin access is protected by:
 1. **Secret URL**: `/ctrl-x7k9m2p4q8` (not public)
-2. **Password Protection**: Required to access admin dashboard
-3. Session-based - password remembered until browser closes
+2. **Password Protection**: Server-side verification via X-Admin-Auth header (base64 encoded)
+3. Session-based - password remembered in localStorage until browser closes
+4. All admin API routes require valid password in X-Admin-Auth header
+
+## Design Guidelines
+- All hover effects use `hover-elevate` utility (no custom hover colors)
+- All CSS colors use HSL format
+- Icons use react-icons (SiSolana, FaXTwitter, FaTelegram) and lucide-react
 
 ## Chart Display
 - Charts are displayed in an embedded modal within the site

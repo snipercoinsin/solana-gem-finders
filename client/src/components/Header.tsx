@@ -1,5 +1,6 @@
-import { Activity, Zap, RefreshCw, Copy } from 'lucide-react';
+import { Activity, RefreshCw, Copy } from 'lucide-react';
 import { FaXTwitter, FaTelegram } from 'react-icons/fa6';
+import { SiSolana } from 'react-icons/si';
 import { Button } from '@/components/ui/button';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { useToast } from '@/hooks/use-toast';
@@ -37,8 +38,8 @@ export function Header({ tokenCount, lastScan, onManualScan, isScanning, nextSca
           {/* Logo & Title */}
           <div className="flex items-center gap-3">
             <div className="relative">
-              <Zap className="w-8 h-8 text-primary" />
-              <div className="absolute inset-0 blur-lg bg-primary/30" />
+              <SiSolana className="w-8 h-8 text-[#9945FF]" />
+              <div className="absolute inset-0 blur-lg bg-[#9945FF]/30" />
             </div>
             <div>
               <h1 className="text-xl font-bold glow-green">SOLANA SCANNER</h1>
@@ -66,12 +67,12 @@ export function Header({ tokenCount, lastScan, onManualScan, isScanning, nextSca
           {/* Actions */}
           <div className="flex items-center gap-2">
             {/* Social Links */}
-            <div className="hidden sm:flex items-center gap-1">
+            <div className="hidden sm:flex items-center gap-2">
               <a
                 href={TWITTER_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="p-2 rounded-lg bg-muted/50 hover:bg-foreground hover:text-background transition-all duration-200"
+                className="p-2.5 rounded-lg bg-muted hover-elevate"
                 data-testid="link-header-twitter"
               >
                 <FaXTwitter className="w-5 h-5" />
@@ -80,7 +81,7 @@ export function Header({ tokenCount, lastScan, onManualScan, isScanning, nextSca
                 href={TELEGRAM_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="p-2 rounded-lg bg-muted/50 hover:bg-[#0088cc] hover:text-white transition-all duration-200"
+                className="p-2.5 rounded-lg bg-muted text-sky-500 hover-elevate"
                 data-testid="link-header-telegram"
               >
                 <FaTelegram className="w-5 h-5" />
@@ -94,7 +95,7 @@ export function Header({ tokenCount, lastScan, onManualScan, isScanning, nextSca
               size="sm"
               onClick={onManualScan}
               disabled={isScanning}
-              className="border-primary/50 hover:bg-primary/10"
+              className="border-primary/50"
               data-testid="button-scan-now"
             >
               <RefreshCw className={`w-4 h-4 mr-2 ${isScanning ? 'animate-spin' : ''}`} />
@@ -111,7 +112,7 @@ export function Header({ tokenCount, lastScan, onManualScan, isScanning, nextSca
           </code>
           <button
             onClick={copyDonationAddress}
-            className="p-1 hover:text-primary transition-colors"
+            className="p-1 rounded hover-elevate"
             data-testid="button-copy-donation"
           >
             <Copy className="w-3 h-3" />

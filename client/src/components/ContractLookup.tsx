@@ -112,7 +112,7 @@ export function ContractLookup() {
           {address && (
             <button
               onClick={handleClear}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground rounded hover-elevate"
             >
               <X className="w-4 h-4" />
             </button>

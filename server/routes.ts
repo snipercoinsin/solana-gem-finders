@@ -530,27 +530,25 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  // Admin routes - protected by authentication
-  app.get("/api/admin/check", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const admin = await storage.getAdminByUserId(userId);
-      if (!admin) {
-        return res.status(403).json({ error: "Not an admin", isAdmin: false });
-      }
-      res.json({ isAdmin: true, role: admin.role });
-    } catch (error) {
-      res.status(500).json({ error: "Failed to check admin status" });
+  // Admin password verification middleware
+  const ADMIN_PASSWORD_HASH = 'U3BsaW50ZXJLaGF5cm9EYXJrRFowMDMzNiM=';
+  
+  const verifyAdminPassword = (req: any, res: any, next: any) => {
+    const authHeader = req.headers['x-admin-auth'];
+    if (!authHeader || authHeader !== ADMIN_PASSWORD_HASH) {
+      return res.status(401).json({ error: 'Unauthorized' });
     }
+    next();
+  };
+
+  // Admin routes - protected by password authentication
+  app.get("/api/admin/check", verifyAdminPassword, async (req: any, res) => {
+    res.json({ isAdmin: true, role: 'super_admin' });
   });
 
   // Admin: Featured tokens management
-  app.get("/api/admin/featured-tokens", isAuthenticated, async (req: any, res) => {
+  app.get("/api/admin/featured-tokens", verifyAdminPassword, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const admin = await storage.getAdminByUserId(userId);
-      if (!admin) return res.status(403).json({ error: "Not authorized" });
-
       const tokens = await storage.getFeaturedTokens();
       res.json(tokens);
     } catch (error) {
@@ -558,12 +556,8 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  app.post("/api/admin/featured-tokens", isAuthenticated, async (req: any, res) => {
+  app.post("/api/admin/featured-tokens", verifyAdminPassword, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const admin = await storage.getAdminByUserId(userId);
-      if (!admin) return res.status(403).json({ error: "Not authorized" });
-
       const token = await storage.addFeaturedToken(req.body);
       res.json(token);
     } catch (error) {
@@ -571,12 +565,8 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  app.delete("/api/admin/featured-tokens/:id", isAuthenticated, async (req: any, res) => {
+  app.delete("/api/admin/featured-tokens/:id", verifyAdminPassword, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const admin = await storage.getAdminByUserId(userId);
-      if (!admin) return res.status(403).json({ error: "Not authorized" });
-
       await storage.removeFeaturedToken(req.params.id);
       res.json({ success: true });
     } catch (error) {
@@ -585,12 +575,8 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Admin: Ads management
-  app.get("/api/admin/ads", isAuthenticated, async (req: any, res) => {
+  app.get("/api/admin/ads", verifyAdminPassword, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const admin = await storage.getAdminByUserId(userId);
-      if (!admin) return res.status(403).json({ error: "Not authorized" });
-
       const ads = await storage.getAllAds();
       res.json(ads);
     } catch (error) {
@@ -598,12 +584,8 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  app.post("/api/admin/ads", isAuthenticated, async (req: any, res) => {
+  app.post("/api/admin/ads", verifyAdminPassword, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const admin = await storage.getAdminByUserId(userId);
-      if (!admin) return res.status(403).json({ error: "Not authorized" });
-
       const validated = insertSiteAdSchema.parse(req.body);
       const ad = await storage.createAd(validated);
       res.json(ad);
@@ -612,12 +594,8 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  app.put("/api/admin/ads/:id", isAuthenticated, async (req: any, res) => {
+  app.put("/api/admin/ads/:id", verifyAdminPassword, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const admin = await storage.getAdminByUserId(userId);
-      if (!admin) return res.status(403).json({ error: "Not authorized" });
-
       const ad = await storage.updateAd(req.params.id, req.body);
       res.json(ad);
     } catch (error) {
@@ -625,12 +603,8 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  app.delete("/api/admin/ads/:id", isAuthenticated, async (req: any, res) => {
+  app.delete("/api/admin/ads/:id", verifyAdminPassword, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const admin = await storage.getAdminByUserId(userId);
-      if (!admin) return res.status(403).json({ error: "Not authorized" });
-
       await storage.deleteAd(req.params.id);
       res.json({ success: true });
     } catch (error) {
@@ -639,12 +613,8 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Admin: Articles management
-  app.get("/api/admin/articles", isAuthenticated, async (req: any, res) => {
+  app.get("/api/admin/articles", verifyAdminPassword, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const admin = await storage.getAdminByUserId(userId);
-      if (!admin) return res.status(403).json({ error: "Not authorized" });
-
       const articles = await storage.getAllArticles();
       res.json(articles);
     } catch (error) {
@@ -652,25 +622,17 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  app.post("/api/admin/articles", isAuthenticated, async (req: any, res) => {
+  app.post("/api/admin/articles", verifyAdminPassword, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const admin = await storage.getAdminByUserId(userId);
-      if (!admin) return res.status(403).json({ error: "Not authorized" });
-
-      const article = await storage.createArticle({ ...req.body, authorId: userId });
+      const article = await storage.createArticle(req.body);
       res.json(article);
     } catch (error) {
       res.status(500).json({ error: "Failed to create article" });
     }
   });
 
-  app.put("/api/admin/articles/:id", isAuthenticated, async (req: any, res) => {
+  app.put("/api/admin/articles/:id", verifyAdminPassword, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const admin = await storage.getAdminByUserId(userId);
-      if (!admin) return res.status(403).json({ error: "Not authorized" });
-
       const article = await storage.updateArticle(req.params.id, req.body);
       res.json(article);
     } catch (error) {
@@ -678,12 +640,8 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  app.delete("/api/admin/articles/:id", isAuthenticated, async (req: any, res) => {
+  app.delete("/api/admin/articles/:id", verifyAdminPassword, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const admin = await storage.getAdminByUserId(userId);
-      if (!admin) return res.status(403).json({ error: "Not authorized" });
-
       await storage.deleteArticle(req.params.id);
       res.json({ success: true });
     } catch (error) {
@@ -692,12 +650,8 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Admin: Visitor stats
-  app.get("/api/admin/visitor-stats", isAuthenticated, async (req: any, res) => {
+  app.get("/api/admin/visitor-stats", verifyAdminPassword, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const admin = await storage.getAdminByUserId(userId);
-      if (!admin) return res.status(403).json({ error: "Not authorized" });
-
       const stats = await storage.getVisitorStats();
       res.json(stats);
     } catch (error) {
@@ -705,15 +659,9 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  // Admin: Sub-admin management (super_admin only)
-  app.get("/api/admin/admins", isAuthenticated, async (req: any, res) => {
+  // Admin: Sub-admin management
+  app.get("/api/admin/admins", verifyAdminPassword, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const admin = await storage.getAdminByUserId(userId);
-      if (!admin || admin.role !== "super_admin") {
-        return res.status(403).json({ error: "Not authorized" });
-      }
-
       const admins = await storage.getAllAdmins();
       res.json(admins);
     } catch (error) {
@@ -721,14 +669,8 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  app.post("/api/admin/admins", isAuthenticated, async (req: any, res) => {
+  app.post("/api/admin/admins", verifyAdminPassword, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const admin = await storage.getAdminByUserId(userId);
-      if (!admin || admin.role !== "super_admin") {
-        return res.status(403).json({ error: "Not authorized" });
-      }
-
       const newAdmin = await storage.createAdmin({ ...req.body, role: "admin" });
       res.json(newAdmin);
     } catch (error) {
@@ -736,14 +678,8 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  app.delete("/api/admin/admins/:id", isAuthenticated, async (req: any, res) => {
+  app.delete("/api/admin/admins/:id", verifyAdminPassword, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const admin = await storage.getAdminByUserId(userId);
-      if (!admin || admin.role !== "super_admin") {
-        return res.status(403).json({ error: "Not authorized" });
-      }
-
       await storage.deleteAdmin(req.params.id);
       res.json({ success: true });
     } catch (error) {
