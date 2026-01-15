@@ -88,21 +88,21 @@ export function AdDisplay({ position }: AdDisplayProps) {
   if (ads.length === 0) return null;
 
   const positionClasses: Record<AdPosition, string> = {
-    top: 'w-full py-3 border-b border-border',
-    bottom: 'w-full py-3 border-t border-border',
+    top: 'w-full py-2',
+    bottom: 'w-full py-2',
     left: 'fixed left-0 top-1/2 -translate-y-1/2 w-[160px] z-40',
     right: 'fixed right-0 top-1/2 -translate-y-1/2 w-[160px] z-40',
   };
 
   return (
-    <div className={`bg-background/80 ${positionClasses[position]}`}>
+    <div className={`${positionClasses[position]}`}>
       {ads.map((ad) => (
         <div
           key={ad.id}
           ref={(el) => {
             if (el) containerRefs.current.set(ad.id, el);
           }}
-          className="flex justify-center items-center min-h-[90px]"
+          className="flex justify-center items-center"
         />
       ))}
     </div>
