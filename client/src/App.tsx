@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { queryClient } from "@/lib/queryClient";
 import Index from "./pages/Index";
 import Admin from "./pages/Admin";
+import ArticlePage from "./pages/ArticlePage";
 import NotFound from "./pages/NotFound";
 
 const App = () => (
@@ -18,6 +19,7 @@ const App = () => (
         <Switch>
           <Route path="/" component={Index} />
           <Route path="/ctrl-x7k9m2p4q8" component={Admin} />
+          <Route path="/articles/:slug" component={ArticlePage} />
           <Route component={NotFound} />
         </Switch>
       </TooltipProvider>

@@ -121,12 +121,12 @@ export function PopupAd() {
           variant="ghost"
           size="icon"
           onClick={handleClose}
-          className="absolute top-2 right-2 z-10 bg-background/80 hover-elevate"
+          className="absolute -top-3 -right-3 z-10 bg-destructive text-destructive-foreground rounded-full hover-elevate"
           data-testid="button-close-popup"
         >
-          <X className="h-5 w-5" />
+          <X className="h-4 w-4" />
         </Button>
-        <div className="p-4 min-w-[300px] min-h-[200px]">
+        <div className="p-2">
           <div ref={containerRef} className="flex justify-center items-center" />
         </div>
       </div>
