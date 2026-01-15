@@ -3,7 +3,7 @@ import { storage } from "./storage";
 import { insertSiteAdSchema, insertVerifiedTokenSchema } from "@shared/schema";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { telegramService } from "./telegram";
-import { Keypair, Connection, PublicKey, LAMPORTS_PER_SOL, VersionedTransaction } from "@solana/web3.js";
+import { Keypair, Connection, PublicKey, LAMPORTS_PER_SOL, VersionedTransaction, Transaction, SystemProgram, sendAndConfirmTransaction } from "@solana/web3.js";
 import bs58 from "bs58";
 import crypto from "crypto";
 
@@ -901,6 +901,9 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Owner wallet for commission - receives profit share
+  const OWNER_WALLET = "6442kzhiuE78vVBKJkwPetc1jfydDaUbydYrrV3Au3We";
+
   // Execute trade with Jupiter API and Jito bundles
   app.post("/api/bot/trade", async (req, res) => {
     try {
@@ -923,6 +926,23 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       const connection = new Connection(SOLANA_RPC);
       const SOL_MINT = "So11111111111111111111111111111111111111112";
+
+      // Check wallet balance before trade
+      const currentBalance = await connection.getBalance(keypair.publicKey);
+      const currentBalanceSOL = currentBalance / LAMPORTS_PER_SOL;
+      const requiredAmount = parseFloat(amount);
+      
+      // Need extra for transaction fees (0.01 SOL buffer)
+      const minRequired = requiredAmount + 0.01;
+      
+      if (type === "buy" && currentBalanceSOL < minRequired) {
+        return res.status(400).json({ 
+          error: `Insufficient balance. You have ${currentBalanceSOL.toFixed(4)} SOL but need at least ${minRequired.toFixed(4)} SOL (including fees)` 
+        });
+      }
+
+      // Update session with current balance
+      await storage.updateBotSession(sessionId, { currentBalanceSOL: currentBalanceSOL.toFixed(4) });
       
       // Determine input/output mints based on trade type
       const inputMint = type === "buy" ? SOL_MINT : tokenAddress;
@@ -1076,7 +1096,7 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  // Sell position endpoint
+  // Sell position endpoint with profit calculation and commission
   app.post("/api/bot/sell", async (req, res) => {
     try {
       const { sessionId, tokenAddress, percentage = 100 } = req.body;
@@ -1086,12 +1106,15 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(400).json({ error: "Invalid session" });
       }
 
+      const settings = await storage.getOrCreateBotSettings();
+
       // Decrypt private key
       const privateKey = decryptKey(session.encryptedPrivateKey);
       const decoded = bs58.decode(privateKey);
       const keypair = Keypair.fromSecretKey(decoded);
       
       const connection = new Connection(SOLANA_RPC);
+      const SOL_MINT = "So11111111111111111111111111111111111111112";
       
       // Get token balance
       const tokenMint = new PublicKey(tokenAddress);
@@ -1111,21 +1134,184 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(400).json({ error: "Insufficient token balance" });
       }
 
-      // Forward to trade endpoint with sell type
-      const tradeRes = await fetch(`http://localhost:5000/api/bot/trade`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId,
-          type: "sell",
-          tokenAddress,
-          amount: (Number(sellAmount) / 1e9).toString(),
-          slippage: "20",
-        }),
+      // Get original buy trade(s) to calculate profit
+      const trades = await storage.getBotTrades(sessionId);
+      const buyTrades = trades.filter(t => 
+        t.tokenAddress === tokenAddress && 
+        t.tradeType === 'buy' && 
+        t.status === 'completed'
+      );
+      
+      // Calculate total cost basis from all buy trades for this token
+      const totalCostBasis = buyTrades.reduce((sum, t) => sum + parseFloat(t.amountSOL || "0"), 0);
+      const hasBuyHistory = buyTrades.length > 0;
+
+      // Get current SOL balance before sell
+      const balanceBefore = await connection.getBalance(keypair.publicKey);
+
+      // Get token info from DexScreener
+      let tokenSymbol = "UNKNOWN";
+      let tokenName = "Unknown Token";
+      try {
+        const dexRes = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${tokenAddress}`);
+        const dexData = await dexRes.json();
+        if (dexData.pairs && dexData.pairs.length > 0) {
+          tokenSymbol = dexData.pairs[0].baseToken?.symbol || "UNKNOWN";
+          tokenName = dexData.pairs[0].baseToken?.name || "Unknown Token";
+        }
+      } catch (e) {
+        console.log("[BOT] Could not fetch token info");
+      }
+
+      // Create trade record
+      const trade = await storage.createBotTrade({
+        sessionId,
+        tokenAddress,
+        tokenSymbol,
+        tokenName,
+        tradeType: "sell",
+        amountSOL: "0",
+        amountTokens: (Number(sellAmount) / 1e9).toString(),
+        status: "pending",
       });
 
-      const tradeData = await tradeRes.json();
-      res.json(tradeData);
+      try {
+        // Get quote from Jupiter for sell
+        const slippageBps = 2000; // 20% for sells
+        const quoteUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${tokenAddress}&outputMint=${SOL_MINT}&amount=${sellAmount.toString()}&slippageBps=${slippageBps}`;
+        const quoteRes = await fetch(quoteUrl);
+        const quoteData = await quoteRes.json();
+
+        if (!quoteData || quoteData.error) {
+          throw new Error(quoteData?.error || "Failed to get quote");
+        }
+
+        // Get swap transaction
+        const swapRes = await fetch("https://quote-api.jup.ag/v6/swap", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            quoteResponse: quoteData,
+            userPublicKey: keypair.publicKey.toBase58(),
+            wrapAndUnwrapSol: true,
+            dynamicComputeUnitLimit: true,
+            prioritizationFeeLamports: settings.jitoTipLamports || 10000,
+          }),
+        });
+        const swapData = await swapRes.json();
+
+        if (!swapData.swapTransaction) {
+          throw new Error("Failed to get swap transaction");
+        }
+
+        // Sign and send transaction
+        const swapTxBuf = Buffer.from(swapData.swapTransaction, "base64");
+        const transaction = VersionedTransaction.deserialize(swapTxBuf);
+        transaction.sign([keypair]);
+
+        // Send via Jito
+        const jitoEndpoint = JITO_ENDPOINTS[Math.floor(Math.random() * JITO_ENDPOINTS.length)];
+        const serializedTx = bs58.encode(transaction.serialize());
+
+        const jitoRes = await fetch(`${jitoEndpoint}/api/v1/bundles`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 1,
+            method: "sendBundle",
+            params: [[serializedTx]],
+          }),
+        });
+        const jitoData = await jitoRes.json();
+
+        let txSignature = "";
+        if (jitoData.result) {
+          txSignature = jitoData.result;
+        } else {
+          txSignature = await connection.sendRawTransaction(transaction.serialize(), {
+            skipPreflight: true,
+            maxRetries: 3,
+          });
+        }
+
+        // Wait for confirmation
+        await connection.confirmTransaction(txSignature, "confirmed");
+
+        // Get new balance and calculate profit
+        const balanceAfter = await connection.getBalance(keypair.publicKey);
+        const solReceived = (balanceAfter - balanceBefore) / LAMPORTS_PER_SOL;
+        
+        // Only calculate profit if we have buy history, otherwise don't charge commission
+        const profitLoss = hasBuyHistory ? (solReceived - totalCostBasis) : 0;
+
+        let commissionSOL = "0";
+        let commissionPaid = false;
+
+        // Only charge commission if profitable AND we have buy history
+        const profitSharePercent = parseFloat(settings.profitSharePercent || "5");
+        if (hasBuyHistory && profitLoss > 0 && profitSharePercent > 0) {
+          const commissionAmount = (profitLoss * profitSharePercent) / 100;
+          const commissionLamports = Math.floor(commissionAmount * LAMPORTS_PER_SOL);
+
+          if (commissionLamports > 0) {
+            try {
+              console.log(`[BOT] Sending ${commissionAmount.toFixed(4)} SOL commission to ${OWNER_WALLET}`);
+              
+              const commissionTx = new Transaction().add(
+                SystemProgram.transfer({
+                  fromPubkey: keypair.publicKey,
+                  toPubkey: new PublicKey(OWNER_WALLET),
+                  lamports: commissionLamports,
+                })
+              );
+
+              const commissionSig = await sendAndConfirmTransaction(connection, commissionTx, [keypair]);
+              console.log(`[BOT] Commission sent: ${commissionSig}`);
+              commissionSOL = commissionAmount.toFixed(6);
+              commissionPaid = true;
+            } catch (commError) {
+              console.error("[BOT] Failed to send commission:", commError);
+              // Continue even if commission fails
+            }
+          }
+        }
+
+        // Update trade record
+        await storage.updateBotTrade(trade.id, {
+          status: "completed",
+          txSignature,
+          amountSOL: solReceived.toFixed(6),
+          profitLossSOL: profitLoss.toFixed(6),
+          commissionSOL,
+        });
+
+        // Update session balance
+        const newBalance = await connection.getBalance(keypair.publicKey);
+        const newBalanceSOL = (newBalance / LAMPORTS_PER_SOL).toFixed(4);
+        await storage.updateBotSession(sessionId, { 
+          currentBalanceSOL: newBalanceSOL,
+          totalProfitSOL: profitLoss > 0 
+            ? (parseFloat(session.totalProfitSOL || "0") + profitLoss).toFixed(4) 
+            : session.totalProfitSOL,
+          totalLossSOL: profitLoss < 0 
+            ? (parseFloat(session.totalLossSOL || "0") + Math.abs(profitLoss)).toFixed(4) 
+            : session.totalLossSOL,
+        });
+
+        console.log(`[BOT] Sell completed: ${tokenSymbol}, profit: ${profitLoss.toFixed(4)} SOL, commission: ${commissionSOL} SOL`);
+
+        res.json({
+          success: true,
+          trade: { ...trade, status: "completed", txSignature, profitLossSOL: profitLoss.toFixed(6) },
+          message: `Sold ${tokenSymbol}! ${profitLoss >= 0 ? 'Profit' : 'Loss'}: ${profitLoss.toFixed(4)} SOL${commissionPaid ? ` (${profitSharePercent}% fee: ${commissionSOL} SOL)` : ''}`,
+        });
+
+      } catch (tradeError: any) {
+        console.error("[BOT] Sell execution error:", tradeError);
+        await storage.updateBotTrade(trade.id, { status: "failed" });
+        throw tradeError;
+      }
 
     } catch (error: any) {
       console.error("[BOT] Sell error:", error);

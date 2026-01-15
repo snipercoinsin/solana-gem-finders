@@ -460,11 +460,21 @@ export default function TradingBot() {
                       data-testid="switch-auto-sell"
                     />
                   </div>
+                  {parseFloat(session?.currentBalanceSOL || '0') < parseFloat(buyAmount) && (
+                    <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-500">
+                      <AlertTriangle className="w-4 h-4 inline mr-2" />
+                      Insufficient balance. You need at least {buyAmount} SOL to execute this trade.
+                    </div>
+                  )}
                   <div className="flex gap-4">
                     <Button 
                       onClick={handleBuy}
-                      className="flex-1 bg-green-600 hover:bg-green-700"
-                      disabled={executeTradeMutation.isPending}
+                      className="flex-1 bg-green-600"
+                      disabled={
+                        executeTradeMutation.isPending || 
+                        parseFloat(session?.currentBalanceSOL || '0') < parseFloat(buyAmount) ||
+                        parseFloat(session?.currentBalanceSOL || '0') <= 0
+                      }
                       data-testid="button-buy"
                     >
                       {executeTradeMutation.isPending ? (
@@ -472,7 +482,9 @@ export default function TradingBot() {
                       ) : (
                         <TrendingUp className="w-4 h-4 mr-2" />
                       )}
-                      BUY with Jito
+                      {parseFloat(session?.currentBalanceSOL || '0') <= 0 
+                        ? 'No Balance' 
+                        : 'BUY with Jito'}
                     </Button>
                   </div>
                 </CardContent>
