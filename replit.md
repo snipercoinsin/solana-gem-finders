@@ -117,5 +117,25 @@ Admin access is protected by:
 
 ## Chart Display
 - Charts are displayed in an embedded modal within the site
-- Uses DexScreener embed with dark theme
+- Uses DexScreener embed with dark theme and black background
 - No external navigation required
+
+## Telegram Integration
+Real-time token alerts are sent to a Telegram channel when new tokens are verified.
+
+### Setup
+1. Create a Telegram bot via @BotFather
+2. Create a channel and add the bot as an administrator
+3. Set the following environment variables:
+   - `TELEGRAM_BOT_TOKEN` - Bot token from @BotFather
+   - `TELEGRAM_CHANNEL_ID` - Channel ID (e.g., @your_channel_name or -100xxxxxxxxxx)
+
+### Admin API Endpoints
+- `POST /api/admin/telegram/test` - Test Telegram connection
+- `GET /api/admin/telegram/status` - Check if Telegram is configured
+
+### Features
+- Sends token image (if available) with detailed information
+- Includes safety score, price, market cap, liquidity, volume
+- Links to Dexscreener, Solscan, RugCheck, and social media
+- Markdown formatting for better readability

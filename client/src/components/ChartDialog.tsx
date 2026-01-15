@@ -18,10 +18,10 @@ export function ChartDialog({ open, onOpenChange, contractAddress, tokenSymbol }
             {tokenSymbol} Chart
           </DialogTitle>
         </DialogHeader>
-        <div className="flex-1 h-full min-h-[500px] p-4 pt-2">
+        <div className="flex-1 h-full min-h-[500px] p-4 pt-2 bg-black rounded-b-lg">
           <iframe
             src={embedUrl}
-            className="w-full h-full rounded-lg border border-border"
+            className="w-full h-full rounded-lg border border-border bg-black"
             title={`${tokenSymbol} Chart`}
             allowFullScreen
           />

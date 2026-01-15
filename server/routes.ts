@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { storage } from "./storage";
 import { insertSiteAdSchema, insertVerifiedTokenSchema } from "@shared/schema";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
+import { telegramService } from "./telegram";
 
 interface DexscreenerPair {
   chainId: string;
@@ -58,6 +59,9 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Setup authentication first
   await setupAuth(app);
   registerAuthRoutes(app);
+  
+  // Initialize Telegram bot
+  telegramService.initialize();
 
   app.get("/api/tokens", async (req, res) => {
     try {
@@ -280,7 +284,7 @@ export async function registerRoutes(app: Express): Promise<void> {
           const telegramUrl = socials.find((s) => s.type === "telegram")?.url || null;
           const websiteUrl = pair.info?.websites?.[0]?.url || null;
 
-          await storage.createVerifiedToken({
+          const newToken = await storage.createVerifiedToken({
             tokenName: pair.baseToken.name,
             tokenSymbol: pair.baseToken.symbol,
             contractAddress: contractAddress,
@@ -307,6 +311,30 @@ export async function registerRoutes(app: Express): Promise<void> {
             telegramUrl: telegramUrl,
             websiteUrl: websiteUrl,
             safetyReasons: safetyReasons,
+          });
+
+          // Send Telegram notification for new token
+          await telegramService.sendNewTokenAlert({
+            tokenName: pair.baseToken.name,
+            tokenSymbol: pair.baseToken.symbol,
+            contractAddress: contractAddress,
+            currentPrice: pair.priceUsd || null,
+            marketCap: pair.fdv?.toString() || null,
+            liquidityUsd: pair.liquidity?.usd?.toString() || null,
+            volume24h: pair.volume?.h24?.toString() || null,
+            safetyScore: safetyScore,
+            priceChange24h: pair.priceChange?.h24?.toString() || null,
+            imageUrl: pair.info?.imageUrl || null,
+            dexscreenerUrl: pair.url,
+            solscanUrl: `https://solscan.io/token/${contractAddress}`,
+            rugcheckUrl: `https://rugcheck.xyz/tokens/${contractAddress}`,
+            twitterUrl: twitterUrl,
+            telegramUrl: telegramUrl,
+            websiteUrl: websiteUrl,
+            safetyReasons: safetyReasons,
+            ownershipRenounced: ownershipRenounced,
+            liquidityLocked: liquidityLocked || false,
+            honeypotSafe: honeypotSafe,
           });
         } catch (tokenError) {
           console.error(`[SCAN] Error processing ${pair.baseToken.symbol}:`, tokenError);
@@ -707,5 +735,29 @@ export async function registerRoutes(app: Express): Promise<void> {
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch article" });
     }
+  });
+
+  // Admin: Telegram bot management
+  app.post("/api/admin/telegram/test", verifyAdminPassword, async (req: any, res) => {
+    try {
+      const success = await telegramService.testConnection();
+      if (success) {
+        res.json({ success: true, message: "Telegram bot connected successfully" });
+      } else {
+        res.status(400).json({ error: "Telegram bot not configured or connection failed" });
+      }
+    } catch (error) {
+      res.status(500).json({ error: "Failed to test Telegram connection" });
+    }
+  });
+
+  app.get("/api/admin/telegram/status", verifyAdminPassword, async (req: any, res) => {
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    const channelId = process.env.TELEGRAM_CHANNEL_ID;
+    res.json({
+      configured: !!(botToken && channelId),
+      hasToken: !!botToken,
+      hasChannelId: !!channelId
+    });
   });
 }

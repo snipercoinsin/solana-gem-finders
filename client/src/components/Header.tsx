@@ -67,25 +67,28 @@ export function Header({ tokenCount, lastScan, onManualScan, isScanning, nextSca
           {/* Actions */}
           <div className="flex items-center gap-2">
             {/* Social Links */}
-            <div className="hidden sm:flex items-center gap-2">
-              <a
-                href={TWITTER_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2.5 rounded-lg bg-muted hover-elevate"
-                data-testid="link-header-twitter"
-              >
-                <FaXTwitter className="w-5 h-5" />
-              </a>
-              <a
-                href={TELEGRAM_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2.5 rounded-lg bg-muted text-sky-500 hover-elevate"
-                data-testid="link-header-telegram"
-              >
-                <FaTelegram className="w-5 h-5" />
-              </a>
+            <div className="hidden sm:flex items-center gap-1">
+              <Button variant="ghost" size="icon" asChild>
+                <a
+                  href={TWITTER_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  data-testid="link-header-twitter"
+                >
+                  <FaXTwitter className="w-5 h-5" />
+                </a>
+              </Button>
+              <Button variant="ghost" size="icon" asChild>
+                <a
+                  href={TELEGRAM_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sky-500"
+                  data-testid="link-header-telegram"
+                >
+                  <FaTelegram className="w-5 h-5" />
+                </a>
+              </Button>
             </div>
             
             <ThemeSwitcher />
@@ -105,18 +108,43 @@ export function Header({ tokenCount, lastScan, onManualScan, isScanning, nextSca
         </div>
         
         {/* Donation Bar */}
-        <div className="flex items-center justify-center gap-2 mt-2 pt-2 border-t border-border/50">
-          <span className="text-xs text-muted-foreground">Donate SOL:</span>
-          <code className="text-xs font-mono text-primary bg-muted/50 px-2 py-0.5 rounded">
-            {DONATION_ADDRESS.slice(0, 8)}...{DONATION_ADDRESS.slice(-6)}
-          </code>
-          <button
+        <div className="flex items-center justify-center gap-3 mt-2 pt-2 border-t border-border/50">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Donate SOL:</span>
+            <code className="text-xs font-mono text-primary bg-muted/50 px-2 py-0.5 rounded">
+              {DONATION_ADDRESS.slice(0, 8)}...{DONATION_ADDRESS.slice(-6)}
+            </code>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={copyDonationAddress}
-            className="p-1 rounded hover-elevate"
             data-testid="button-copy-donation"
           >
-            <Copy className="w-3 h-3" />
-          </button>
+            <Copy className="w-4 h-4" />
+          </Button>
+          
+          <Button variant="ghost" size="icon" asChild>
+            <a
+              href={TWITTER_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-testid="link-donation-twitter"
+            >
+              <FaXTwitter className="w-5 h-5" />
+            </a>
+          </Button>
+          <Button variant="ghost" size="icon" asChild>
+            <a
+              href={TELEGRAM_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sky-500"
+              data-testid="link-donation-telegram"
+            >
+              <FaTelegram className="w-5 h-5" />
+            </a>
+          </Button>
         </div>
       </div>
     </header>
