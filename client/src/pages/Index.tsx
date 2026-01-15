@@ -36,6 +36,7 @@ const Index = () => {
   const [nextScanIn, setNextScanIn] = useState(SCAN_INTERVAL);
   const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
+  const hasInitialScan = useRef(false);
 
   const lastScan = logs[0] ? formatTimeAgo(logs[0].createdAt) : null;
 
@@ -47,7 +48,7 @@ const Index = () => {
     fetch('/api/track-visit', { method: 'POST' }).catch(() => {});
   }, []);
 
-  const handleManualScan = useCallback(async () => {
+  const doScan = async () => {
     setIsScanning(true);
     try {
       const response = await fetch('/api/scan-tokens', { method: 'POST' });
@@ -68,12 +69,19 @@ const Index = () => {
     } finally {
       setIsScanning(false);
     }
-  }, [refetch, toast]);
+  };
+
+  const handleManualScan = () => {
+    doScan();
+  };
 
   // Auto-scan on mount and every 5 minutes
   useEffect(() => {
-    // Initial scan on mount
-    handleManualScan();
+    // Initial scan on mount (only once)
+    if (!hasInitialScan.current) {
+      hasInitialScan.current = true;
+      doScan();
+    }
 
     // Setup countdown timer
     countdownRef.current = setInterval(() => {
@@ -85,16 +93,16 @@ const Index = () => {
       });
     }, 1000);
 
-    // Setup auto-scan interval
+    // Setup auto-scan interval (every 5 minutes)
     scanTimeoutRef.current = setInterval(() => {
-      handleManualScan();
+      doScan();
     }, SCAN_INTERVAL * 1000);
 
     return () => {
       if (scanTimeoutRef.current) clearInterval(scanTimeoutRef.current);
       if (countdownRef.current) clearInterval(countdownRef.current);
     };
-  }, [handleManualScan]);
+  }, []);
 
   const featuredAddresses = useMemo(() => 
     new Set((featuredTokens || []).map((t: any) => t.contractAddress.toLowerCase())),
