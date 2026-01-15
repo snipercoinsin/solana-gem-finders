@@ -54,10 +54,12 @@ const Index = () => {
       const response = await fetch('/api/scan-tokens', { method: 'POST' });
       if (!response.ok) throw new Error('Scan failed');
       const result = await response.json();
-      toast({
-        title: "Scan Complete",
-        description: `Scanned ${result.scanned} tokens, ${result.passed} passed`,
-      });
+      if (result.passed > 0) {
+        toast({
+          title: "Scan Complete",
+          description: `${result.passed} new token${result.passed > 1 ? 's' : ''} discovered`,
+        });
+      }
       refetch();
       setNextScanIn(SCAN_INTERVAL);
     } catch (err) {

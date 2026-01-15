@@ -1,4 +1,4 @@
-import { Activity, RefreshCw } from 'lucide-react';
+import { Activity, RefreshCw, Copy, Zap } from 'lucide-react';
 import { FaXTwitter, FaTelegram } from 'react-icons/fa6';
 import { SiSolana } from 'react-icons/si';
 import { Button } from '@/components/ui/button';
@@ -37,9 +37,8 @@ export function Header({ tokenCount, lastScan, onManualScan, isScanning, nextSca
         <div className="flex items-center justify-between">
           {/* Logo & Title */}
           <div className="flex items-center gap-3">
-            <div className="relative">
-              <SiSolana className="w-8 h-8 text-[#9945FF]" />
-              <div className="absolute inset-0 blur-lg bg-[#9945FF]/30" />
+            <div className="relative flex items-center justify-center w-10 h-10 rounded-lg bg-gradient-to-br from-[#14F195] to-[#9945FF]">
+              <Zap className="w-6 h-6 text-black" />
             </div>
             <div>
               <h1 className="text-xl font-bold glow-green">SOLANA SCANNER</h1>
@@ -68,16 +67,15 @@ export function Header({ tokenCount, lastScan, onManualScan, isScanning, nextSca
           <div className="flex items-center gap-2">
             {/* Social Links & Donate */}
             <div className="hidden sm:flex items-center gap-1">
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <button 
                 onClick={copyDonationAddress}
-                className="text-[#14F195] active:scale-95 transition-transform gap-1"
+                className="flex items-center gap-1 px-2 py-1 text-[#14F195] text-xs font-medium rounded hover:bg-transparent active:scale-95 transition-transform"
                 data-testid="button-copy-donation"
               >
-                <SiSolana className="w-4 h-4" />
-                <span className="text-xs">Donate</span>
-              </Button>
+                <Copy className="w-3 h-3" />
+                <span>Donate</span>
+                <SiSolana className="w-3.5 h-3.5" />
+              </button>
               <Button variant="ghost" size="icon" asChild>
                 <a
                   href={TWITTER_URL}

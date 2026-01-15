@@ -58,15 +58,22 @@ export function ExpandedTokenCard({ token, isNew, isFeatured }: ExpandedTokenCar
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10 border border-border">
-              <AvatarImage 
-                src={token.imageUrl || undefined} 
-                alt={token.tokenSymbol} 
-              />
-              <AvatarFallback className="bg-primary/20 text-primary text-xs font-bold">
-                {token.tokenSymbol.slice(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative">
+              <Avatar className="h-10 w-10 border border-border">
+                <AvatarImage 
+                  src={token.imageUrl || undefined} 
+                  alt={token.tokenSymbol} 
+                />
+                <AvatarFallback className="bg-primary/20 text-primary text-xs font-bold">
+                  {token.tokenSymbol.slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              {isRecent() && (
+                <Badge className="badge-new-glow text-[7px] px-1 py-0 absolute -top-1 -left-1 rounded-sm">
+                  NEW
+                </Badge>
+              )}
+            </div>
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
                 {isFeatured && (
@@ -86,11 +93,6 @@ export function ExpandedTokenCard({ token, isNew, isFeatured }: ExpandedTokenCar
             </div>
           </div>
           <div className="flex flex-col items-end gap-1">
-            {isRecent() && (
-              <Badge className="badge-new-glow text-[8px] px-1 py-0 rounded-sm">
-                NEW
-              </Badge>
-            )}
             <div className="flex items-center gap-1">
               <Shield className="w-4 h-4 text-primary" />
               <span className="text-primary font-bold">{token.safetyScore}%</span>
