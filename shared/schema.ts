@@ -146,3 +146,70 @@ export type AdminUser = typeof adminUsers.$inferSelect;
 export type FeaturedToken = typeof featuredTokens.$inferSelect;
 export type VisitorStat = typeof visitorStats.$inferSelect;
 export type Article = typeof articles.$inferSelect;
+
+// Trading Bot Settings (Admin controlled)
+export const botSettings = pgTable("bot_settings", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  isEnabled: boolean("is_enabled").default(true),
+  isFree: boolean("is_free").default(true),
+  subscriptionPriceSOL: numeric("subscription_price_sol").default("0"),
+  profitSharePercent: numeric("profit_share_percent").default("5"),
+  minBuyAmountSOL: numeric("min_buy_amount_sol").default("0.01"),
+  maxBuyAmountSOL: numeric("max_buy_amount_sol").default("1"),
+  defaultSlippagePercent: numeric("default_slippage_percent").default("15"),
+  jitoTipLamports: integer("jito_tip_lamports").default(10000),
+  autoSellEnabled: boolean("auto_sell_enabled").default(true),
+  takeProfitPercent: numeric("take_profit_percent").default("50"),
+  stopLossPercent: numeric("stop_loss_percent").default("30"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// User Bot Sessions (wallet connection)
+export const botUserSessions = pgTable("bot_user_sessions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  sessionId: text("session_id").notNull().unique(),
+  walletAddress: text("wallet_address").notNull(),
+  encryptedPrivateKey: text("encrypted_private_key"),
+  initialBalanceSOL: numeric("initial_balance_sol").default("0"),
+  currentBalanceSOL: numeric("current_balance_sol").default("0"),
+  totalProfitSOL: numeric("total_profit_sol").default("0"),
+  totalLossSOL: numeric("total_loss_sol").default("0"),
+  commissionPaidSOL: numeric("commission_paid_sol").default("0"),
+  isActive: boolean("is_active").default(true),
+  isPremium: boolean("is_premium").default(false),
+  premiumExpiresAt: timestamp("premium_expires_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Bot Trades
+export const botTrades = pgTable("bot_trades", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  sessionId: text("session_id").notNull(),
+  tokenAddress: text("token_address").notNull(),
+  tokenSymbol: text("token_symbol"),
+  tokenName: text("token_name"),
+  tradeType: text("trade_type").notNull(), // "buy" or "sell"
+  amountSOL: numeric("amount_sol").notNull(),
+  amountTokens: numeric("amount_tokens"),
+  pricePerToken: numeric("price_per_token"),
+  txSignature: text("tx_signature"),
+  jitoBundle: text("jito_bundle"),
+  status: text("status").default("pending"), // "pending", "confirmed", "failed"
+  profitLossSOL: numeric("profit_loss_sol"),
+  commissionSOL: numeric("commission_sol"),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertBotSettingsSchema = createInsertSchema(botSettings).omit({ id: true, updatedAt: true });
+export const insertBotUserSessionSchema = createInsertSchema(botUserSessions).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertBotTradeSchema = createInsertSchema(botTrades).omit({ id: true, createdAt: true });
+
+export type InsertBotSettings = z.infer<typeof insertBotSettingsSchema>;
+export type InsertBotUserSession = z.infer<typeof insertBotUserSessionSchema>;
+export type InsertBotTrade = z.infer<typeof insertBotTradeSchema>;
+
+export type BotSettings = typeof botSettings.$inferSelect;
+export type BotUserSession = typeof botUserSessions.$inferSelect;
+export type BotTrade = typeof botTrades.$inferSelect;
