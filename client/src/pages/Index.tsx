@@ -10,7 +10,6 @@ import { AdDisplay } from '@/components/AdDisplay';
 import { useVerifiedTokens } from '@/hooks/useVerifiedTokens';
 import { useScanLogs } from '@/hooks/useScanLogs';
 import { formatTimeAgo } from '@/lib/formatters';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import {
   Pagination,
@@ -23,7 +22,7 @@ import {
 } from '@/components/ui/pagination';
 
 const Index = () => {
-  const { tokens, loading, page, totalPages, totalCount, goToPage } = useVerifiedTokens();
+  const { tokens, loading, page, totalPages, totalCount, goToPage, refetch } = useVerifiedTokens();
   const { logs } = useScanLogs();
   const { toast } = useToast();
   
@@ -31,17 +30,19 @@ const Index = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
-  const lastScan = logs[0] ? formatTimeAgo(logs[0].created_at) : null;
+  const lastScan = logs[0] ? formatTimeAgo(logs[0].createdAt) : null;
 
   const handleManualScan = async () => {
     setIsScanning(true);
     try {
-      const { error } = await supabase.functions.invoke('scan-tokens');
-      if (error) throw error;
+      const response = await fetch('/api/scan-tokens', { method: 'POST' });
+      if (!response.ok) throw new Error('Scan failed');
+      const result = await response.json();
       toast({
         title: "Scan Complete",
-        description: "Token scan finished successfully",
+        description: `Scanned ${result.scanned} tokens, ${result.passed} passed`,
       });
+      refetch();
     } catch (err) {
       toast({
         title: "Scan Failed",
@@ -58,9 +59,9 @@ const Index = () => {
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         const matchesSearch = 
-          token.token_name.toLowerCase().includes(query) ||
-          token.token_symbol.toLowerCase().includes(query) ||
-          token.contract_address.toLowerCase().includes(query);
+          token.tokenName.toLowerCase().includes(query) ||
+          token.tokenSymbol.toLowerCase().includes(query) ||
+          token.contractAddress.toLowerCase().includes(query);
         if (!matchesSearch) return false;
       }
       return true;

@@ -1,17 +1,21 @@
-export function formatPrice(price: number | null): string {
+export function formatPrice(price: number | string | null): string {
   if (price === null || price === undefined) return '-';
-  if (price < 0.00001) return `$${price.toExponential(2)}`;
-  if (price < 1) return `$${price.toFixed(6)}`;
-  if (price < 1000) return `$${price.toFixed(2)}`;
-  return `$${formatCompact(price)}`;
+  const num = typeof price === 'string' ? parseFloat(price) : price;
+  if (isNaN(num)) return '-';
+  if (num < 0.00001) return `$${num.toExponential(2)}`;
+  if (num < 1) return `$${num.toFixed(6)}`;
+  if (num < 1000) return `$${num.toFixed(2)}`;
+  return `$${formatCompact(num)}`;
 }
 
-export function formatCompact(num: number | null): string {
+export function formatCompact(num: number | string | null): string {
   if (num === null || num === undefined) return '-';
-  if (num >= 1e9) return `${(num / 1e9).toFixed(2)}B`;
-  if (num >= 1e6) return `${(num / 1e6).toFixed(2)}M`;
-  if (num >= 1e3) return `${(num / 1e3).toFixed(2)}K`;
-  return num.toFixed(2);
+  const n = typeof num === 'string' ? parseFloat(num) : num;
+  if (isNaN(n)) return '-';
+  if (n >= 1e9) return `${(n / 1e9).toFixed(2)}B`;
+  if (n >= 1e6) return `${(n / 1e6).toFixed(2)}M`;
+  if (n >= 1e3) return `${(n / 1e3).toFixed(2)}K`;
+  return n.toFixed(2);
 }
 
 export function formatTimeAgo(date: string): string {

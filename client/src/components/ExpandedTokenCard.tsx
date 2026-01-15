@@ -1,4 +1,4 @@
-import { VerifiedToken } from '@/types/token';
+import { VerifiedToken } from '@/hooks/useVerifiedTokens';
 import { formatPrice, formatCompact, formatTimeAgo, truncateAddress } from '@/lib/formatters';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -23,12 +23,12 @@ export function ExpandedTokenCard({ token, isNew }: ExpandedTokenCardProps) {
   const { toast } = useToast();
 
   const copyAddress = () => {
-    navigator.clipboard.writeText(token.contract_address);
+    navigator.clipboard.writeText(token.contractAddress);
     toast({ description: "Contract address copied!" });
   };
 
   const isRecent = () => {
-    const launchTime = new Date(token.launch_time);
+    const launchTime = new Date(token.launchTime);
     const now = new Date();
     return now.getTime() - launchTime.getTime() < 3600000;
   };
@@ -48,44 +48,42 @@ export function ExpandedTokenCard({ token, isNew }: ExpandedTokenCardProps) {
               </Badge>
             )}
             <span className="text-lg font-bold text-foreground glow-green">
-              {token.token_symbol}
+              {token.tokenSymbol}
             </span>
             <span className="text-muted-foreground text-sm">
-              {token.token_name}
+              {token.tokenName}
             </span>
           </div>
           <div className="flex items-center gap-1">
             <Shield className="w-4 h-4 text-primary" />
-            <span className="text-primary font-bold">{token.safety_score}%</span>
+            <span className="text-primary font-bold">{token.safetyScore}%</span>
           </div>
         </div>
       </CardHeader>
 
       <CardContent className="space-y-3">
-        {/* Price & Market Data Row */}
         <div className="grid grid-cols-4 gap-2 text-xs">
           <div>
             <span className="text-muted-foreground block">Price</span>
-            <span className="text-foreground font-mono">{formatPrice(token.current_price)}</span>
+            <span className="text-foreground font-mono">{formatPrice(token.currentPrice)}</span>
           </div>
           <div>
             <span className="text-muted-foreground block">MCap</span>
-            <span className="text-foreground font-mono">${formatCompact(token.market_cap)}</span>
+            <span className="text-foreground font-mono">${formatCompact(token.marketCap)}</span>
           </div>
           <div>
             <span className="text-muted-foreground block">Liq</span>
-            <span className="text-secondary font-mono">${formatCompact(token.liquidity_usd)}</span>
+            <span className="text-secondary font-mono">${formatCompact(token.liquidityUsd)}</span>
           </div>
           <div>
             <span className="text-muted-foreground block">Vol 24h</span>
-            <span className="text-foreground font-mono">${formatCompact(token.volume_24h)}</span>
+            <span className="text-foreground font-mono">${formatCompact(token.volume24h)}</span>
           </div>
         </div>
 
-        {/* Contract Address */}
         <div className="flex items-center justify-between bg-muted/50 rounded px-2 py-1">
           <code className="text-xs text-muted-foreground font-mono">
-            {truncateAddress(token.contract_address, 8)}
+            {truncateAddress(token.contractAddress, 8)}
           </code>
           <div className="flex items-center gap-1">
             <button
@@ -94,9 +92,9 @@ export function ExpandedTokenCard({ token, isNew }: ExpandedTokenCardProps) {
             >
               <Copy className="w-3 h-3" />
             </button>
-            {token.dexscreener_url && (
+            {token.dexscreenerUrl && (
               <a
-                href={token.dexscreener_url}
+                href={token.dexscreenerUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-1 hover:text-primary transition-colors"
@@ -107,50 +105,47 @@ export function ExpandedTokenCard({ token, isNew }: ExpandedTokenCardProps) {
           </div>
         </div>
 
-        {/* Safety Badges */}
         <div className="flex flex-wrap gap-1">
-          {token.ownership_renounced && (
+          {token.ownershipRenounced && (
             <Badge variant="outline" className="text-[10px] border-primary/50 text-primary">
               <CheckCircle className="w-2.5 h-2.5 mr-1" />
               Ownership
             </Badge>
           )}
-          {token.liquidity_locked && (
+          {token.liquidityLocked && (
             <Badge variant="outline" className="text-[10px] border-secondary/50 text-secondary">
               <Lock className="w-2.5 h-2.5 mr-1" />
-              Locked {token.liquidity_lock_duration_months}mo
+              Locked {token.liquidityLockDurationMonths}mo
             </Badge>
           )}
-          {token.contract_verified && (
+          {token.contractVerified && (
             <Badge variant="outline" className="text-[10px] border-primary/50 text-primary">
               <Shield className="w-2.5 h-2.5 mr-1" />
               Verified
             </Badge>
           )}
-          {token.honeypot_safe && (
+          {token.honeypotSafe && (
             <Badge variant="outline" className="text-[10px] border-primary/50 text-primary">
               <CheckCircle className="w-2.5 h-2.5 mr-1" />
               Safe
             </Badge>
           )}
-          {(token.buy_tax !== null && token.buy_tax < 10) && (
+          {(token.buyTax !== null && parseFloat(token.buyTax) < 10) && (
             <Badge variant="outline" className="text-[10px] border-muted-foreground/50">
-              Tax: {token.buy_tax}/{token.sell_tax}%
+              Tax: {token.buyTax}/{token.sellTax}%
             </Badge>
           )}
         </div>
 
-        {/* Always Visible Details */}
         <div className="pt-2 border-t border-border space-y-2">
           <div className="text-xs text-muted-foreground">
-            Launched: {formatTimeAgo(token.launch_time)}
+            Launched: {formatTimeAgo(token.launchTime)}
           </div>
           
-          {/* Social Links */}
           <div className="flex gap-2 flex-wrap">
-            {token.twitter_url && (
+            {token.twitterUrl && (
               <a
-                href={token.twitter_url}
+                href={token.twitterUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"
@@ -158,9 +153,9 @@ export function ExpandedTokenCard({ token, isNew }: ExpandedTokenCardProps) {
                 <Twitter className="w-3 h-3" /> Twitter
               </a>
             )}
-            {token.telegram_url && (
+            {token.telegramUrl && (
               <a
-                href={token.telegram_url}
+                href={token.telegramUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-secondary"
@@ -168,9 +163,9 @@ export function ExpandedTokenCard({ token, isNew }: ExpandedTokenCardProps) {
                 <Send className="w-3 h-3" /> Telegram
               </a>
             )}
-            {token.website_url && (
+            {token.websiteUrl && (
               <a
-                href={token.website_url}
+                href={token.websiteUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-accent"
@@ -180,12 +175,11 @@ export function ExpandedTokenCard({ token, isNew }: ExpandedTokenCardProps) {
             )}
           </div>
 
-          {/* Safety Reasons */}
-          {token.safety_reasons && token.safety_reasons.length > 0 && (
+          {token.safetyReasons && token.safetyReasons.length > 0 && (
             <div className="space-y-1">
               <span className="text-xs text-muted-foreground">Safety Analysis:</span>
               <ul className="text-xs space-y-0.5">
-                {token.safety_reasons.slice(0, 3).map((reason, i) => (
+                {token.safetyReasons.slice(0, 3).map((reason, i) => (
                   <li key={i} className="flex items-start gap-1 text-primary">
                     <CheckCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
                     {reason}
@@ -195,11 +189,10 @@ export function ExpandedTokenCard({ token, isNew }: ExpandedTokenCardProps) {
             </div>
           )}
 
-          {/* Quick Links */}
           <div className="flex gap-2 pt-1">
-            {token.solscan_url && (
+            {token.solscanUrl && (
               <a
-                href={token.solscan_url}
+                href={token.solscanUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs text-muted-foreground hover:text-primary underline"
@@ -207,9 +200,9 @@ export function ExpandedTokenCard({ token, isNew }: ExpandedTokenCardProps) {
                 Solscan
               </a>
             )}
-            {token.rugcheck_url && (
+            {token.rugcheckUrl && (
               <a
-                href={token.rugcheck_url}
+                href={token.rugcheckUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs text-muted-foreground hover:text-primary underline"
@@ -217,9 +210,9 @@ export function ExpandedTokenCard({ token, isNew }: ExpandedTokenCardProps) {
                 RugCheck
               </a>
             )}
-            {token.dexscreener_url && (
+            {token.dexscreenerUrl && (
               <a
-                href={token.dexscreener_url}
+                href={token.dexscreenerUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs text-muted-foreground hover:text-primary underline"

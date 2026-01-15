@@ -1,14 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 
 type AdPosition = 'top' | 'bottom' | 'left' | 'right';
 
 interface SiteAd {
   id: string;
   position: AdPosition;
-  content_type: string;
+  contentType: string;
   content: string;
-  is_active: boolean;
+  isActive: boolean;
 }
 
 interface AdDisplayProps {
@@ -21,45 +20,24 @@ export function AdDisplay({ position }: AdDisplayProps) {
 
   useEffect(() => {
     const fetchAds = async () => {
-      const { data } = await supabase
-        .from('site_ads')
-        .select('*')
-        .eq('position', position)
-        .eq('is_active', true);
-
-      if (data) {
-        setAds(data);
+      try {
+        const response = await fetch('/api/ads');
+        if (response.ok) {
+          const data = await response.json();
+          const filteredAds = data.filter((ad: SiteAd) => ad.position === position);
+          setAds(filteredAds);
+        }
+      } catch (err) {
+        console.error('Failed to fetch ads:', err);
       }
     };
 
     fetchAds();
-
-    // Subscribe to realtime updates
-    const channel = supabase
-      .channel(`ads-${position}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'site_ads',
-          filter: `position=eq.${position}`,
-        },
-        () => {
-          fetchAds();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, [position]);
 
   useEffect(() => {
-    // Execute JavaScript ads
     ads.forEach((ad) => {
-      if (ad.content_type === 'js' && containerRef.current) {
+      if (ad.contentType === 'js' && containerRef.current) {
         try {
           const script = document.createElement('script');
           script.textContent = ad.content;
@@ -83,7 +61,7 @@ export function AdDisplay({ position }: AdDisplayProps) {
   return (
     <div ref={containerRef} className={`bg-background/80 ${positionClasses[position]}`}>
       {ads.map((ad) => {
-        if (ad.content_type === 'url') {
+        if (ad.contentType === 'url') {
           return (
             <div key={ad.id} className="flex justify-center">
               <a href={ad.content} target="_blank" rel="noopener noreferrer">
@@ -100,7 +78,7 @@ export function AdDisplay({ position }: AdDisplayProps) {
           );
         }
 
-        if (ad.content_type === 'html') {
+        if (ad.contentType === 'html') {
           return (
             <div
               key={ad.id}
@@ -110,7 +88,6 @@ export function AdDisplay({ position }: AdDisplayProps) {
           );
         }
 
-        // JS ads are handled in useEffect
         return <div key={ad.id} />;
       })}
     </div>
