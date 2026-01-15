@@ -1,6 +1,7 @@
 import { VerifiedToken } from '@/hooks/useVerifiedTokens';
 import { formatPrice, formatCompact, formatTimeAgo, truncateAddress } from '@/lib/formatters';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Table,
   TableBody,
@@ -92,6 +93,15 @@ export function TokenTable({ tokens }: TokenTableProps) {
                       NEW
                     </Badge>
                   )}
+                  <Avatar className="h-8 w-8 border border-border">
+                    <AvatarImage 
+                      src={token.imageUrl || undefined} 
+                      alt={token.tokenSymbol} 
+                    />
+                    <AvatarFallback className="bg-primary/20 text-primary text-[10px] font-bold">
+                      {token.tokenSymbol.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
                   <div>
                     <span className="font-bold text-foreground">{token.tokenSymbol}</span>
                     <span className="text-muted-foreground text-xs block">{token.tokenName}</span>

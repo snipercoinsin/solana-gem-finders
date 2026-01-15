@@ -70,12 +70,13 @@ export function Header({ tokenCount, lastScan, onManualScan, isScanning, nextSca
             <div className="hidden sm:flex items-center gap-1">
               <Button 
                 variant="ghost" 
-                size="icon" 
+                size="sm" 
                 onClick={copyDonationAddress}
-                className="text-[#14F195] active:scale-95 transition-transform"
+                className="text-[#14F195] active:scale-95 transition-transform gap-1"
                 data-testid="button-copy-donation"
               >
-                <SiSolana className="w-5 h-5" />
+                <SiSolana className="w-4 h-4" />
+                <span className="text-xs">Donate</span>
               </Button>
               <Button variant="ghost" size="icon" asChild>
                 <a
