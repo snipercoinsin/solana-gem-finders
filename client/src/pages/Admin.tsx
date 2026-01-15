@@ -343,6 +343,7 @@ function AdsPanel() {
                   <SelectItem value="bottom">Bottom</SelectItem>
                   <SelectItem value="left">Left</SelectItem>
                   <SelectItem value="right">Right</SelectItem>
+                  <SelectItem value="popup">Popup (Center)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

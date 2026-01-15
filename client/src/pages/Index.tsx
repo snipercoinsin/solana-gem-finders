@@ -7,6 +7,7 @@ import { StatusBar } from '@/components/StatusBar';
 import { EmptyState } from '@/components/EmptyState';
 import { UnifiedSearch } from '@/components/UnifiedSearch';
 import { AdDisplay } from '@/components/AdDisplay';
+import { PopupAd } from '@/components/PopupAd';
 import { useVerifiedTokens } from '@/hooks/useVerifiedTokens';
 import { useScanLogs } from '@/hooks/useScanLogs';
 import { formatTimeAgo } from '@/lib/formatters';
@@ -268,6 +269,7 @@ const Index = () => {
 
       <AdDisplay position="bottom" />
       <StatusBar />
+      <PopupAd />
     </div>
   );
 };
