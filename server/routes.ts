@@ -901,6 +901,40 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Generate new wallet
+  app.post("/api/bot/generate-wallet", async (_req, res) => {
+    try {
+      const keypair = Keypair.generate();
+      const privateKey = bs58.encode(keypair.secretKey);
+      const publicKey = keypair.publicKey.toBase58();
+      
+      res.json({ 
+        privateKey,
+        publicKey,
+        message: "Wallet generated successfully. Save your private key securely!"
+      });
+    } catch (error) {
+      console.error("[BOT] Generate wallet error:", error);
+      res.status(500).json({ error: "Failed to generate wallet" });
+    }
+  });
+
+  // Delete session (for generated wallets)
+  app.delete("/api/bot/session/:sessionId", async (req, res) => {
+    try {
+      const session = await storage.getBotSession(req.params.sessionId);
+      if (!session) {
+        return res.status(404).json({ error: "Session not found" });
+      }
+      
+      await storage.deleteBotSession(req.params.sessionId);
+      res.json({ success: true, message: "Wallet session deleted" });
+    } catch (error) {
+      console.error("[BOT] Delete session error:", error);
+      res.status(500).json({ error: "Failed to delete session" });
+    }
+  });
+
   // Owner wallet for commission - receives profit share
   const OWNER_WALLET = "6442kzhiuE78vVBKJkwPetc1jfydDaUbydYrrV3Au3We";
 

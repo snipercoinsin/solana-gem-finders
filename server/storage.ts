@@ -352,6 +352,11 @@ export class DatabaseStorage implements IStorage {
     return updated || null;
   }
 
+  async deleteBotSession(sessionId: string): Promise<void> {
+    await db.delete(botTrades).where(eq(botTrades.sessionId, sessionId));
+    await db.delete(botUserSessions).where(eq(botUserSessions.sessionId, sessionId));
+  }
+
   // Bot Trades
   async getBotTrades(sessionId: string): Promise<BotTrade[]> {
     return db.select().from(botTrades)

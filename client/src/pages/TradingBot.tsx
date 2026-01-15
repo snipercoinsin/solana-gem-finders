@@ -30,7 +30,22 @@ import {
   Rocket,
   Target,
   Percent,
+  LogOut,
+  Plus,
+  Copy,
+  Trash2,
+  Info,
 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { SiSolana } from 'react-icons/si';
 
 function getTimeAgo(date: Date): string {
@@ -101,6 +116,10 @@ export default function TradingBot() {
   const [autoSell, setAutoSell] = useState(true);
   const [takeProfit, setTakeProfit] = useState('50');
   const [stopLoss, setStopLoss] = useState('30');
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [isGeneratedWallet, setIsGeneratedWallet] = useState(false);
+  const [generatedKeyVisible, setGeneratedKeyVisible] = useState(false);
+  const [generatedPrivateKey, setGeneratedPrivateKey] = useState('');
 
   const { data: botSettings } = useQuery<BotSettings>({
     queryKey: ['/api/bot/settings'],
@@ -125,6 +144,11 @@ export default function TradingBot() {
     onSuccess: (data) => {
       setSession(data.session);
       localStorage.setItem('bot_session_id', data.session.sessionId);
+      if (!generatedKeyVisible) {
+        setIsGeneratedWallet(false);
+        localStorage.removeItem('is_generated_wallet');
+      }
+      setGeneratedKeyVisible(false);
       toast({ description: 'Wallet connected successfully!' });
     },
     onError: () => {
@@ -187,11 +211,17 @@ export default function TradingBot() {
 
   useEffect(() => {
     const savedSessionId = localStorage.getItem('bot_session_id');
+    const savedIsGenerated = localStorage.getItem('is_generated_wallet');
     if (savedSessionId) {
       fetch(`/api/bot/session/${savedSessionId}`)
         .then(res => res.ok ? res.json() : null)
         .then(data => {
-          if (data?.session) setSession(data.session);
+          if (data?.session) {
+            setSession(data.session);
+            if (savedIsGenerated === 'true') {
+              setIsGeneratedWallet(true);
+            }
+          }
         })
         .catch(() => {});
     }
@@ -208,11 +238,49 @@ export default function TradingBot() {
     });
   };
 
-  const handleDisconnect = () => {
+  const handleLogoutClick = () => {
+    if (isGeneratedWallet) {
+      setShowLogoutDialog(true);
+    } else {
+      performLogout(false);
+    }
+  };
+
+  const performLogout = (deleteWallet: boolean) => {
+    if (deleteWallet && session?.sessionId) {
+      fetch(`/api/bot/session/${session.sessionId}`, { method: 'DELETE' })
+        .catch(() => {});
+    }
     setSession(null);
     setPrivateKey('');
+    setGeneratedPrivateKey('');
+    setIsGeneratedWallet(false);
+    setGeneratedKeyVisible(false);
     localStorage.removeItem('bot_session_id');
-    toast({ description: 'Wallet disconnected' });
+    localStorage.removeItem('is_generated_wallet');
+    setShowLogoutDialog(false);
+    toast({ description: deleteWallet ? 'Wallet deleted and disconnected' : 'Wallet disconnected' });
+  };
+
+  const generateNewWallet = async () => {
+    try {
+      const res = await fetch('/api/bot/generate-wallet', { method: 'POST' });
+      if (!res.ok) throw new Error('Failed to generate wallet');
+      const data = await res.json();
+      setGeneratedPrivateKey(data.privateKey);
+      setPrivateKey(data.privateKey);
+      setGeneratedKeyVisible(true);
+      setIsGeneratedWallet(true);
+      localStorage.setItem('is_generated_wallet', 'true');
+      toast({ description: 'New wallet generated! Save your private key before proceeding.' });
+    } catch {
+      toast({ variant: 'destructive', description: 'Failed to generate wallet' });
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ description: 'Copied to clipboard!' });
   };
 
   const handleBuy = () => {
@@ -293,7 +361,7 @@ export default function TradingBot() {
 
       <div className="container mx-auto px-4 py-6">
         {!session ? (
-          <div className="max-w-lg mx-auto">
+          <div className="max-w-lg mx-auto space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -314,6 +382,30 @@ export default function TradingBot() {
                     </div>
                   </div>
                 </div>
+
+                {generatedKeyVisible && generatedPrivateKey && (
+                  <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                      <div className="text-sm flex-1">
+                        <p className="font-medium text-green-500 mb-2">Wallet Generated Successfully!</p>
+                        <p className="text-muted-foreground mb-2">Save this private key securely. You will need it to access your wallet later.</p>
+                        <div className="flex items-center gap-2 p-2 bg-background rounded border">
+                          <code className="text-xs flex-1 break-all">{generatedPrivateKey}</code>
+                          <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            onClick={() => copyToClipboard(generatedPrivateKey)}
+                            data-testid="button-copy-key"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <Label>Private Key (Base58)</Label>
                   <Input
@@ -338,6 +430,52 @@ export default function TradingBot() {
                   )}
                   Connect Wallet
                 </Button>
+
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-card px-2 text-muted-foreground">Or</span>
+                  </div>
+                </div>
+
+                <Button 
+                  variant="outline"
+                  onClick={generateNewWallet} 
+                  className="w-full"
+                  data-testid="button-generate-wallet"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Generate New Wallet
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="border-blue-500/30">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-blue-500">
+                  <Info className="w-5 h-5" />
+                  How It Works
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm text-muted-foreground">
+                <div className="flex gap-3">
+                  <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500 font-bold text-xs flex-shrink-0">1</div>
+                  <p><strong>Connect or Generate:</strong> Use your existing wallet or generate a new one. Send SOL to the wallet address to fund it.</p>
+                </div>
+                <div className="flex gap-3">
+                  <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500 font-bold text-xs flex-shrink-0">2</div>
+                  <p><strong>Quick Snipe:</strong> Enter a token address and click BUY. Trades are executed instantly using Jito MEV protection.</p>
+                </div>
+                <div className="flex gap-3">
+                  <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500 font-bold text-xs flex-shrink-0">3</div>
+                  <p><strong>Sell Anytime:</strong> Click "Sell All" on any completed buy trade to sell your tokens back to SOL.</p>
+                </div>
+                <div className="flex gap-3">
+                  <div className="w-6 h-6 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-500 font-bold text-xs flex-shrink-0">!</div>
+                  <p><strong>Commission:</strong> We only take {botSettings?.profitSharePercent || 5}% of your profits. No profit = no fee.</p>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -351,7 +489,8 @@ export default function TradingBot() {
                       <SiSolana className="w-5 h-5 text-violet-500" />
                       Wallet Balance
                     </CardTitle>
-                    <Button variant="ghost" size="sm" onClick={handleDisconnect}>
+                    <Button variant="ghost" size="sm" onClick={handleLogoutClick} data-testid="button-disconnect">
+                      <LogOut className="w-4 h-4 mr-1" />
                       Disconnect
                     </Button>
                   </div>
@@ -664,6 +803,10 @@ export default function TradingBot() {
                       </>
                     )}
                   </Button>
+                  <div className="p-3 bg-muted/50 rounded-lg text-xs text-muted-foreground">
+                    <p className="font-medium mb-1">What is Auto Sniper?</p>
+                    <p>When enabled, the bot automatically monitors new tokens from the scanner and buys them instantly using Jito MEV protection. Configure your buy amount and slippage settings above before starting.</p>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -723,6 +866,45 @@ export default function TradingBot() {
           </div>
         )}
       </div>
+
+      <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Wallet className="w-5 h-5" />
+              Disconnect Wallet
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>This wallet was generated on this site. What would you like to do with it?</p>
+              <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-sm">
+                <p className="text-yellow-500 font-medium">Important:</p>
+                <p className="text-muted-foreground">If you delete the wallet, all funds in it will be lost. Make sure to withdraw any remaining balance first.</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel onClick={() => setShowLogoutDialog(false)} data-testid="button-cancel-logout">
+              Cancel
+            </AlertDialogCancel>
+            <Button 
+              variant="outline" 
+              onClick={() => performLogout(false)}
+              data-testid="button-keep-wallet"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Keep Wallet & Disconnect
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => performLogout(true)}
+              data-testid="button-delete-wallet"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete Wallet
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
