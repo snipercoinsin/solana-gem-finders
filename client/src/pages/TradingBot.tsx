@@ -33,6 +33,17 @@ import {
 } from 'lucide-react';
 import { SiSolana } from 'react-icons/si';
 
+function getTimeAgo(date: Date): string {
+  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
 interface BotSettings {
   id: string;
   isEnabled: boolean;
@@ -95,9 +106,10 @@ export default function TradingBot() {
     queryKey: ['/api/bot/settings'],
   });
 
-  const { data: trades } = useQuery<BotTrade[]>({
+  const { data: trades, refetch: refetchTrades } = useQuery<BotTrade[]>({
     queryKey: ['/api/bot/trades', session?.sessionId],
     enabled: !!session?.sessionId,
+    refetchInterval: 5000,
   });
 
   const connectWalletMutation = useMutation({
@@ -131,12 +143,42 @@ export default function TradingBot() {
           slippage,
         }),
       });
-      if (!res.ok) throw new Error('Trade failed');
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Trade failed');
+      }
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/bot/trades'] });
-      toast({ description: 'Trade executed successfully!' });
+      queryClient.invalidateQueries({ queryKey: ['/api/bot/session'] });
+      toast({ description: data.message || 'Trade executed successfully!' });
+    },
+    onError: (error: Error) => {
+      toast({ variant: 'destructive', description: error.message });
+    },
+  });
+
+  const sellMutation = useMutation({
+    mutationFn: async (params: { tokenAddress: string; percentage?: number }) => {
+      const res = await fetch('/api/bot/sell', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: session?.sessionId,
+          ...params,
+        }),
+      });
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Sell failed');
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/bot/trades'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/bot/session'] });
+      toast({ description: data.message || 'Sold successfully!' });
     },
     onError: (error: Error) => {
       toast({ variant: 'destructive', description: error.message });
@@ -441,46 +483,121 @@ export default function TradingBot() {
                   <CardTitle className="flex items-center gap-2">
                     <History className="w-5 h-5" />
                     Trade History
+                    <Badge variant="outline" className="ml-auto">
+                      {trades?.length || 0} trades
+                    </Badge>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ScrollArea className="h-[300px]">
+                  <ScrollArea className="h-[400px]">
                     {trades && trades.length > 0 ? (
-                      <div className="space-y-2">
-                        {trades.map((trade) => (
-                          <div 
-                            key={trade.id} 
-                            className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-                          >
-                            <div className="flex items-center gap-3">
-                              <Badge variant={trade.tradeType === 'buy' ? 'default' : 'secondary'}>
-                                {trade.tradeType.toUpperCase()}
-                              </Badge>
-                              <div>
-                                <p className="font-medium">{trade.tokenSymbol || 'Unknown'}</p>
-                                <p className="text-xs text-muted-foreground font-mono truncate max-w-[200px]">
-                                  {trade.tokenAddress}
-                                </p>
+                      <div className="space-y-3">
+                        {trades.map((trade) => {
+                          const pnl = parseFloat(trade.profitLossSOL || '0');
+                          const isProfitable = pnl > 0;
+                          const isLoss = pnl < 0;
+                          const isBuy = trade.tradeType === 'buy';
+                          const tradeTime = new Date(trade.createdAt);
+                          const timeAgo = getTimeAgo(tradeTime);
+                          
+                          return (
+                            <div 
+                              key={trade.id} 
+                              className={`p-4 rounded-lg border ${
+                                trade.status === 'completed' 
+                                  ? isProfitable ? 'border-green-500/30 bg-green-500/5' 
+                                  : isLoss ? 'border-red-500/30 bg-red-500/5' 
+                                  : 'border-border bg-muted/30'
+                                  : trade.status === 'pending' ? 'border-yellow-500/30 bg-yellow-500/5'
+                                  : 'border-red-500/30 bg-red-500/5'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex items-center gap-3">
+                                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                    isBuy ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'
+                                  }`}>
+                                    {isBuy ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-bold text-lg">{trade.tokenSymbol || 'Unknown'}</span>
+                                      <Badge variant={isBuy ? 'default' : 'secondary'} className="text-xs">
+                                        {trade.tradeType.toUpperCase()}
+                                      </Badge>
+                                      <Badge 
+                                        variant="outline" 
+                                        className={`text-xs ${
+                                          trade.status === 'completed' ? 'text-green-500 border-green-500' 
+                                          : trade.status === 'pending' ? 'text-yellow-500 border-yellow-500'
+                                          : 'text-red-500 border-red-500'
+                                        }`}
+                                      >
+                                        {trade.status}
+                                      </Badge>
+                                    </div>
+                                    <p className="text-sm text-muted-foreground">{trade.tokenName || 'Unknown Token'}</p>
+                                    <p className="text-xs text-muted-foreground font-mono truncate max-w-[250px]">
+                                      {trade.tokenAddress}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground mt-1">{timeAgo}</p>
+                                  </div>
+                                </div>
+                                <div className="text-right space-y-1">
+                                  <p className="font-bold text-lg">{parseFloat(trade.amountSOL).toFixed(4)} SOL</p>
+                                  {trade.amountTokens && (
+                                    <p className="text-sm text-muted-foreground">
+                                      {parseFloat(trade.amountTokens).toLocaleString()} tokens
+                                    </p>
+                                  )}
+                                  {trade.status === 'completed' && pnl !== 0 && (
+                                    <p className={`font-semibold ${isProfitable ? 'text-green-500' : 'text-red-500'}`}>
+                                      {isProfitable ? '+' : ''}{pnl.toFixed(4)} SOL
+                                    </p>
+                                  )}
+                                  {trade.commissionSOL && parseFloat(trade.commissionSOL) > 0 && (
+                                    <p className="text-xs text-yellow-500">
+                                      Fee: {parseFloat(trade.commissionSOL).toFixed(4)} SOL
+                                    </p>
+                                  )}
+                                  {trade.txSignature && (
+                                    <a 
+                                      href={`https://solscan.io/tx/${trade.txSignature}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-xs text-blue-500 hover:underline"
+                                    >
+                                      View TX
+                                    </a>
+                                  )}
+                                  {isBuy && trade.status === 'completed' && (
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      onClick={() => sellMutation.mutate({ tokenAddress: trade.tokenAddress })}
+                                      disabled={sellMutation.isPending}
+                                      className="mt-2"
+                                      data-testid={`button-sell-${trade.id}`}
+                                    >
+                                      {sellMutation.isPending ? (
+                                        <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+                                      ) : (
+                                        <TrendingDown className="w-3 h-3 mr-1" />
+                                      )}
+                                      Sell All
+                                    </Button>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                            <div className="text-right">
-                              <p className="font-medium">{parseFloat(trade.amountSOL).toFixed(4)} SOL</p>
-                              {trade.profitLossSOL && (
-                                <p className={`text-xs ${parseFloat(trade.profitLossSOL) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                  {parseFloat(trade.profitLossSOL) >= 0 ? '+' : ''}{parseFloat(trade.profitLossSOL).toFixed(4)} SOL
-                                </p>
-                              )}
-                              <Badge variant="outline" className="text-xs">
-                                {trade.status}
-                              </Badge>
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     ) : (
                       <div className="text-center py-12 text-muted-foreground">
                         <History className="w-12 h-12 mx-auto mb-4 opacity-50" />
                         <p>No trades yet</p>
+                        <p className="text-sm mt-2">Enter a token address and click BUY to start trading</p>
                       </div>
                     )}
                   </ScrollArea>

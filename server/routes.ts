@@ -3,7 +3,7 @@ import { storage } from "./storage";
 import { insertSiteAdSchema, insertVerifiedTokenSchema } from "@shared/schema";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { telegramService } from "./telegram";
-import { Keypair, Connection, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { Keypair, Connection, PublicKey, LAMPORTS_PER_SOL, VersionedTransaction } from "@solana/web3.js";
 import bs58 from "bs58";
 import crypto from "crypto";
 
@@ -901,7 +901,7 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  // Execute trade (placeholder - real implementation requires DEX integration)
+  // Execute trade with Jupiter API and Jito bundles
   app.post("/api/bot/trade", async (req, res) => {
     try {
       const { sessionId, type, tokenAddress, amount, slippage } = req.body;
@@ -916,32 +916,220 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(400).json({ error: "Bot is currently disabled" });
       }
 
-      // Create trade record
+      // Decrypt private key
+      const privateKey = decryptKey(session.encryptedPrivateKey);
+      const decoded = bs58.decode(privateKey);
+      const keypair = Keypair.fromSecretKey(decoded);
+      
+      const connection = new Connection(SOLANA_RPC);
+      const SOL_MINT = "So11111111111111111111111111111111111111112";
+      
+      // Determine input/output mints based on trade type
+      const inputMint = type === "buy" ? SOL_MINT : tokenAddress;
+      const outputMint = type === "buy" ? tokenAddress : SOL_MINT;
+      const amountLamports = Math.floor(parseFloat(amount) * LAMPORTS_PER_SOL);
+      const slippageBps = Math.floor(parseFloat(slippage || "15") * 100);
+
+      // Get token info from DexScreener for display
+      let tokenSymbol = "UNKNOWN";
+      let tokenName = "Unknown Token";
+      let tokenImage = "";
+      try {
+        const dexRes = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${tokenAddress}`);
+        const dexData = await dexRes.json();
+        if (dexData.pairs && dexData.pairs.length > 0) {
+          tokenSymbol = dexData.pairs[0].baseToken?.symbol || "UNKNOWN";
+          tokenName = dexData.pairs[0].baseToken?.name || "Unknown Token";
+          tokenImage = dexData.pairs[0].info?.imageUrl || "";
+        }
+      } catch (e) {
+        console.log("[BOT] Could not fetch token info");
+      }
+
+      // Create initial trade record
       const trade = await storage.createBotTrade({
         sessionId,
         tokenAddress,
+        tokenSymbol,
+        tokenName,
         tradeType: type,
         amountSOL: amount,
         status: "pending",
       });
 
-      // Here would be the actual Jito bundle execution
-      // For now, we'll mark it as pending for demonstration
-      // Real implementation would:
-      // 1. Decode private key
-      // 2. Create swap transaction
-      // 3. Create Jito bundle with tip
-      // 4. Send to Jito endpoint
-      // 5. Track bundle status
+      try {
+        // Get quote from Jupiter
+        console.log(`[BOT] Getting Jupiter quote for ${type}: ${amount} SOL -> ${tokenAddress}`);
+        const quoteUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amountLamports}&slippageBps=${slippageBps}`;
+        const quoteRes = await fetch(quoteUrl);
+        const quoteData = await quoteRes.json();
 
-      res.json({ 
-        success: true, 
-        trade,
-        message: "Trade submitted to Jito bundle"
-      });
-    } catch (error) {
+        if (!quoteData || quoteData.error) {
+          throw new Error(quoteData?.error || "Failed to get quote");
+        }
+
+        // Get swap transaction from Jupiter
+        console.log("[BOT] Getting swap transaction from Jupiter");
+        const swapRes = await fetch("https://quote-api.jup.ag/v6/swap", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            quoteResponse: quoteData,
+            userPublicKey: keypair.publicKey.toBase58(),
+            wrapAndUnwrapSol: true,
+            dynamicComputeUnitLimit: true,
+            prioritizationFeeLamports: settings.jitoTipLamports || 10000,
+          }),
+        });
+        const swapData = await swapRes.json();
+
+        if (!swapData.swapTransaction) {
+          throw new Error("Failed to get swap transaction");
+        }
+
+        // Decode and sign transaction
+        const swapTxBuf = Buffer.from(swapData.swapTransaction, "base64");
+        const transaction = VersionedTransaction.deserialize(swapTxBuf);
+        transaction.sign([keypair]);
+
+        // Send via Jito bundle for MEV protection
+        const jitoEndpoint = JITO_ENDPOINTS[Math.floor(Math.random() * JITO_ENDPOINTS.length)];
+        const serializedTx = bs58.encode(transaction.serialize());
+
+        console.log(`[BOT] Sending transaction via Jito: ${jitoEndpoint}`);
+        const jitoRes = await fetch(`${jitoEndpoint}/api/v1/bundles`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 1,
+            method: "sendBundle",
+            params: [[serializedTx]],
+          }),
+        });
+        const jitoData = await jitoRes.json();
+
+        let txSignature = "";
+        if (jitoData.result) {
+          console.log("[BOT] Bundle submitted:", jitoData.result);
+          // Get first transaction signature
+          txSignature = jitoData.result;
+        } else {
+          // Fallback: send directly to RPC
+          console.log("[BOT] Jito failed, sending directly to RPC");
+          txSignature = await connection.sendRawTransaction(transaction.serialize(), {
+            skipPreflight: true,
+            maxRetries: 3,
+          });
+        }
+
+        // Wait for confirmation
+        console.log(`[BOT] Waiting for confirmation: ${txSignature}`);
+        const confirmation = await connection.confirmTransaction(txSignature, "confirmed");
+
+        if (confirmation.value.err) {
+          throw new Error("Transaction failed on chain");
+        }
+
+        // Calculate output amount
+        const outAmount = type === "buy" 
+          ? (parseInt(quoteData.outAmount) / 1e9).toFixed(6)  // Assume 9 decimals for most tokens
+          : (parseInt(quoteData.outAmount) / LAMPORTS_PER_SOL).toFixed(6);
+        
+        const pricePerToken = type === "buy"
+          ? (parseFloat(amount) / parseFloat(outAmount)).toFixed(12)
+          : (parseFloat(outAmount) / parseFloat(amount)).toFixed(12);
+
+        // Update trade record as completed
+        await storage.updateBotTrade(trade.id, {
+          status: "completed",
+          txSignature,
+          amountTokens: outAmount,
+          pricePerToken,
+        });
+
+        // Refresh balance
+        const newBalance = await connection.getBalance(keypair.publicKey);
+        const newBalanceSOL = (newBalance / LAMPORTS_PER_SOL).toFixed(4);
+        await storage.updateBotSession(sessionId, { currentBalanceSOL: newBalanceSOL });
+
+        console.log(`[BOT] Trade completed: ${type} ${tokenSymbol}, tx: ${txSignature}`);
+
+        res.json({ 
+          success: true, 
+          trade: { ...trade, status: "completed", txSignature, amountTokens: outAmount },
+          message: `${type.toUpperCase()} executed successfully!`
+        });
+
+      } catch (tradeError: any) {
+        console.error("[BOT] Trade execution error:", tradeError);
+        await storage.updateBotTrade(trade.id, {
+          status: "failed",
+          profitLossSOL: "0",
+        });
+        throw new Error(tradeError.message || "Trade execution failed");
+      }
+
+    } catch (error: any) {
       console.error("[BOT] Trade error:", error);
-      res.status(500).json({ error: "Failed to execute trade" });
+      res.status(500).json({ error: error.message || "Failed to execute trade" });
+    }
+  });
+
+  // Sell position endpoint
+  app.post("/api/bot/sell", async (req, res) => {
+    try {
+      const { sessionId, tokenAddress, percentage = 100 } = req.body;
+      
+      const session = await storage.getBotSession(sessionId);
+      if (!session || !session.encryptedPrivateKey) {
+        return res.status(400).json({ error: "Invalid session" });
+      }
+
+      // Decrypt private key
+      const privateKey = decryptKey(session.encryptedPrivateKey);
+      const decoded = bs58.decode(privateKey);
+      const keypair = Keypair.fromSecretKey(decoded);
+      
+      const connection = new Connection(SOLANA_RPC);
+      
+      // Get token balance
+      const tokenMint = new PublicKey(tokenAddress);
+      const tokenAccounts = await connection.getTokenAccountsByOwner(keypair.publicKey, { mint: tokenMint });
+      
+      if (tokenAccounts.value.length === 0) {
+        return res.status(400).json({ error: "No token balance found" });
+      }
+
+      // Parse token account data to get balance
+      const accountInfo = tokenAccounts.value[0].account;
+      const data = accountInfo.data;
+      const tokenBalance = data.readBigUInt64LE(64);
+      const sellAmount = (tokenBalance * BigInt(percentage)) / 100n;
+
+      if (sellAmount <= 0n) {
+        return res.status(400).json({ error: "Insufficient token balance" });
+      }
+
+      // Forward to trade endpoint with sell type
+      const tradeRes = await fetch(`http://localhost:5000/api/bot/trade`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId,
+          type: "sell",
+          tokenAddress,
+          amount: (Number(sellAmount) / 1e9).toString(),
+          slippage: "20",
+        }),
+      });
+
+      const tradeData = await tradeRes.json();
+      res.json(tradeData);
+
+    } catch (error: any) {
+      console.error("[BOT] Sell error:", error);
+      res.status(500).json({ error: error.message || "Failed to sell" });
     }
   });
 
