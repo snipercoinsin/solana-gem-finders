@@ -62,3 +62,7 @@ Uses Replit's PostgreSQL database with Drizzle ORM.
 - Removed Supabase auth (admin page is open access)
 - Changed property naming from snake_case to camelCase
 - Updated all hooks to use fetch API instead of Supabase client
+- Added token images from DexScreener API (imageUrl field)
+- Added 24h price change tracking with visual indicators (+/-)
+- Created UnifiedSearch component that combines search and contract scanning
+- Enhanced token cards with avatars, trending indicators, and improved layout
