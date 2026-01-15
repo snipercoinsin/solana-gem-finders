@@ -16,7 +16,8 @@ interface AdDisplayProps {
 
 export function AdDisplay({ position }: AdDisplayProps) {
   const [ads, setAds] = useState<SiteAd[]>([]);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const loadedAds = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     const fetchAds = async () => {
@@ -24,7 +25,7 @@ export function AdDisplay({ position }: AdDisplayProps) {
         const response = await fetch('/api/ads');
         if (response.ok) {
           const data = await response.json();
-          const filteredAds = data.filter((ad: SiteAd) => ad.position === position);
+          const filteredAds = data.filter((ad: SiteAd) => ad.position === position && ad.isActive);
           setAds(filteredAds);
         }
       } catch (err) {
@@ -37,14 +38,49 @@ export function AdDisplay({ position }: AdDisplayProps) {
 
   useEffect(() => {
     ads.forEach((ad) => {
-      if (ad.contentType === 'js' && containerRef.current) {
-        try {
-          const script = document.createElement('script');
-          script.textContent = ad.content;
-          containerRef.current.appendChild(script);
-        } catch (err) {
-          console.error('Error executing ad script:', err);
+      if (loadedAds.current.has(ad.id)) return;
+      
+      const container = containerRefs.current.get(ad.id);
+      if (!container) return;
+
+      loadedAds.current.add(ad.id);
+
+      if (ad.contentType === 'html') {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = ad.content;
+
+        const scripts = tempDiv.querySelectorAll('script');
+        const nonScriptContent = tempDiv.innerHTML.replace(/<script[\s\S]*?<\/script>/gi, '');
+        
+        if (nonScriptContent.trim()) {
+          const contentDiv = document.createElement('div');
+          contentDiv.innerHTML = nonScriptContent;
+          container.appendChild(contentDiv);
         }
+
+        scripts.forEach((oldScript) => {
+          const newScript = document.createElement('script');
+          
+          Array.from(oldScript.attributes).forEach((attr) => {
+            newScript.setAttribute(attr.name, attr.value);
+          });
+          
+          if (oldScript.src) {
+            newScript.src = oldScript.src;
+            newScript.async = true;
+          } else if (oldScript.textContent) {
+            newScript.textContent = oldScript.textContent;
+          }
+          
+          container.appendChild(newScript);
+        });
+      } else if (ad.contentType === 'image') {
+        const img = document.createElement('img');
+        img.src = ad.content;
+        img.alt = 'Advertisement';
+        img.className = 'max-h-[90px] object-contain mx-auto';
+        img.onerror = () => { img.style.display = 'none'; };
+        container.appendChild(img);
       }
     });
   }, [ads]);
@@ -52,44 +88,23 @@ export function AdDisplay({ position }: AdDisplayProps) {
   if (ads.length === 0) return null;
 
   const positionClasses: Record<AdPosition, string> = {
-    top: 'w-full py-2 border-b border-border',
-    bottom: 'w-full py-2 border-t border-border',
+    top: 'w-full py-3 border-b border-border',
+    bottom: 'w-full py-3 border-t border-border',
     left: 'fixed left-0 top-1/2 -translate-y-1/2 w-[160px] z-40',
     right: 'fixed right-0 top-1/2 -translate-y-1/2 w-[160px] z-40',
   };
 
   return (
-    <div ref={containerRef} className={`bg-background/80 ${positionClasses[position]}`}>
-      {ads.map((ad) => {
-        if (ad.contentType === 'url') {
-          return (
-            <div key={ad.id} className="flex justify-center">
-              <a href={ad.content} target="_blank" rel="noopener noreferrer">
-                <img
-                  src={ad.content}
-                  alt="Advertisement"
-                  className="max-h-[90px] object-contain"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
-              </a>
-            </div>
-          );
-        }
-
-        if (ad.contentType === 'html') {
-          return (
-            <div
-              key={ad.id}
-              className="flex justify-center"
-              dangerouslySetInnerHTML={{ __html: ad.content }}
-            />
-          );
-        }
-
-        return <div key={ad.id} />;
-      })}
+    <div className={`bg-background/80 ${positionClasses[position]}`}>
+      {ads.map((ad) => (
+        <div
+          key={ad.id}
+          ref={(el) => {
+            if (el) containerRefs.current.set(ad.id, el);
+          }}
+          className="flex justify-center items-center min-h-[90px]"
+        />
+      ))}
     </div>
   );
 }
