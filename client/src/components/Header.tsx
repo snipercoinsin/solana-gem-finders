@@ -14,8 +14,8 @@ interface HeaderProps {
 }
 
 const DONATION_ADDRESS = "6442kzhiuE78vVBKJkwPetc1jfydDaUbydYrrV3Au3We";
-const TWITTER_URL = "https://x.com/DarWebDZ";
-const TELEGRAM_URL = "https://t.me/DarWeb_DZ";
+const TWITTER_URL = "https://x.com/DarkWebDZ/";
+const TELEGRAM_URL = "https://t.me/DarkWeb_DZ";
 
 export function Header({ tokenCount, lastScan, onManualScan, isScanning, nextScanIn }: HeaderProps) {
   const { toast } = useToast();
@@ -37,8 +37,8 @@ export function Header({ tokenCount, lastScan, onManualScan, isScanning, nextSca
         <div className="flex items-center justify-between">
           {/* Logo & Title */}
           <div className="flex items-center gap-3">
-            <div className="relative flex items-center justify-center w-10 h-10 rounded-lg bg-gradient-to-br from-[#14F195] to-[#9945FF]">
-              <Zap className="w-6 h-6 text-black" />
+            <div className="relative flex items-center justify-center w-9 h-9">
+              <Zap className="w-7 h-7 text-[#14F195] drop-shadow-[0_0_8px_rgba(20,241,149,0.6)]" strokeWidth={2.5} />
             </div>
             <div>
               <h1 className="text-xl font-bold glow-green">SOLANA SCANNER</h1>
