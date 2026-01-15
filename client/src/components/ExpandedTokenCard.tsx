@@ -5,7 +5,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ChartDialog } from './ChartDialog';
 import { 
   ExternalLink, 
   Copy, 
@@ -282,23 +281,27 @@ export function ExpandedTokenCard({ token, isNew, isFeatured }: ExpandedTokenCar
             
             <Button
               size="sm"
-              variant="default"
-              onClick={() => setChartOpen(true)}
+              variant="outline"
+              onClick={() => setChartOpen(!chartOpen)}
+              className="border-primary/50"
               data-testid="button-chart"
             >
               <BarChart3 className="w-3 h-3 mr-1" />
-              Chart
+              {chartOpen ? 'Hide' : 'Chart'}
             </Button>
           </div>
+
+          {chartOpen && (
+            <div className="mt-3 rounded-lg overflow-hidden bg-black" style={{ height: '200px' }}>
+              <iframe
+                src={`https://dexscreener.com/solana/${token.contractAddress}?embed=1&theme=dark&info=0&trades=0`}
+                style={{ width: '100%', height: '100%', border: 'none' }}
+                title={`${token.tokenSymbol} Chart`}
+              />
+            </div>
+          )}
         </div>
       </CardContent>
-
-      <ChartDialog
-        open={chartOpen}
-        onOpenChange={setChartOpen}
-        contractAddress={token.contractAddress}
-        tokenSymbol={token.tokenSymbol}
-      />
     </Card>
   );
 }

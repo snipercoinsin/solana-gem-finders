@@ -109,19 +109,14 @@ export function Header({ tokenCount, lastScan, onManualScan, isScanning, nextSca
         
         {/* Donation Bar */}
         <div className="flex items-center justify-center gap-3 mt-2 pt-2 border-t border-border/50">
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Donate SOL:</span>
-            <code className="text-xs font-mono text-primary bg-muted/50 px-2 py-0.5 rounded">
-              {DONATION_ADDRESS.slice(0, 8)}...{DONATION_ADDRESS.slice(-6)}
-            </code>
-          </div>
           <Button
-            variant="ghost"
-            size="icon"
             onClick={copyDonationAddress}
+            className="bg-gradient-to-r from-[#14F195] to-[#9945FF] hover:from-[#14F195]/90 hover:to-[#9945FF]/90 text-black font-semibold border-0 gap-2"
             data-testid="button-copy-donation"
           >
-            <Copy className="w-4 h-4" />
+            <SiSolana className="w-4 h-4" />
+            <span>Donate</span>
+            <Copy className="w-3.5 h-3.5" />
           </Button>
           
           <Button variant="ghost" size="icon" asChild>
