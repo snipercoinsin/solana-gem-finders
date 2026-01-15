@@ -381,56 +381,6 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  app.get("/api/admin/ads", async (req, res) => {
-    try {
-      const ads = await storage.getSiteAds();
-      res.json(ads);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch ads" });
-    }
-  });
-
-  app.post("/api/admin/ads", async (req, res) => {
-    try {
-      const parsed = insertSiteAdSchema.safeParse(req.body);
-      if (!parsed.success) {
-        return res.status(400).json({ error: parsed.error.message });
-      }
-      const ad = await storage.createSiteAd(parsed.data);
-      res.json(ad);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to create ad" });
-    }
-  });
-
-  app.patch("/api/admin/ads/:id", async (req, res) => {
-    try {
-      const allowedFields = ['position', 'contentType', 'content', 'isActive'];
-      const updateData: Record<string, any> = {};
-      for (const field of allowedFields) {
-        if (req.body[field] !== undefined) {
-          updateData[field] = req.body[field];
-        }
-      }
-      const ad = await storage.updateSiteAd(req.params.id, updateData);
-      if (!ad) {
-        return res.status(404).json({ error: "Ad not found" });
-      }
-      res.json(ad);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to update ad" });
-    }
-  });
-
-  app.delete("/api/admin/ads/:id", async (req, res) => {
-    try {
-      await storage.deleteSiteAd(req.params.id);
-      res.json({ success: true });
-    } catch (error) {
-      res.status(500).json({ error: "Failed to delete ad" });
-    }
-  });
-
   app.post("/api/lookup-token", async (req, res) => {
     try {
       const { contractAddress } = req.body;
@@ -652,9 +602,15 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   app.post("/api/admin/articles", verifyAdminPassword, async (req: any, res) => {
     try {
-      const article = await storage.createArticle(req.body);
+      const articleData = {
+        ...req.body,
+        authorId: 'admin',
+        publishedAt: req.body.isPublished ? new Date() : null,
+      };
+      const article = await storage.createArticle(articleData);
       res.json(article);
     } catch (error) {
+      console.error("[ADMIN] Failed to create article:", error);
       res.status(500).json({ error: "Failed to create article" });
     }
   });

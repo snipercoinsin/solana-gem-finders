@@ -23,7 +23,7 @@ import {
   PaginationEllipsis,
 } from '@/components/ui/pagination';
 
-const SCAN_INTERVAL = 5 * 60; // 5 minutes in seconds
+const SCAN_INTERVAL = 30; // 30 seconds for real-time monitoring
 
 const Index = () => {
   const { tokens, loading, page, totalPages, totalCount, goToPage, refetch } = useVerifiedTokens();
@@ -75,7 +75,7 @@ const Index = () => {
     doScan();
   };
 
-  // Auto-scan on mount and every 5 minutes
+  // Auto-scan on mount and every 30 seconds for real-time monitoring
   useEffect(() => {
     // Initial scan on mount (only once)
     if (!hasInitialScan.current) {
@@ -93,7 +93,7 @@ const Index = () => {
       });
     }, 1000);
 
-    // Setup auto-scan interval (every 5 minutes)
+    // Setup auto-scan interval (every 30 seconds)
     scanTimeoutRef.current = setInterval(() => {
       doScan();
     }, SCAN_INTERVAL * 1000);
@@ -105,7 +105,7 @@ const Index = () => {
   }, []);
 
   const featuredAddresses = useMemo(() => 
-    new Set((featuredTokens || []).map((t: any) => t.contractAddress.toLowerCase())),
+    new Set((Array.isArray(featuredTokens) ? featuredTokens : []).map((t: any) => t.contractAddress.toLowerCase())),
     [featuredTokens]
   );
 
