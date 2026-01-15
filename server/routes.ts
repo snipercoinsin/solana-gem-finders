@@ -388,26 +388,35 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(400).json({ error: "Contract address required" });
       }
 
+      console.log(`[LOOKUP] Looking up token: ${contractAddress}`);
+
       const existing = await storage.getVerifiedTokenByContract(contractAddress);
       if (existing) {
+        console.log(`[LOOKUP] Found in database: ${existing.tokenSymbol}`);
         return res.json({ token: existing, source: "database" });
       }
 
+      console.log(`[LOOKUP] Not in database, fetching from DexScreener...`);
       const pairsResponse = await fetch(
         `https://api.dexscreener.com/latest/dex/tokens/${contractAddress}`,
         { headers: { Accept: "application/json" } }
       );
 
       if (!pairsResponse.ok) {
-        return res.status(404).json({ error: "Token not found on DEX" });
+        console.log(`[LOOKUP] DexScreener returned ${pairsResponse.status}`);
+        return res.status(404).json({ error: "Token not found on DEX. Make sure you entered a valid Solana token contract address." });
       }
 
       const pairsData = await pairsResponse.json();
-      const pair = pairsData.pairs?.[0];
+      const solanaPairs = pairsData.pairs?.filter((p: any) => p.chainId === "solana") || [];
+      const pair = solanaPairs[0] || pairsData.pairs?.[0];
 
       if (!pair) {
-        return res.status(404).json({ error: "No trading pair found" });
+        console.log(`[LOOKUP] No trading pairs found`);
+        return res.status(404).json({ error: "No trading pair found for this token. It may be a new token without liquidity." });
       }
+
+      console.log(`[LOOKUP] Found pair: ${pair.baseToken.symbol}`);
 
       let rugCheckData: RugCheckResponse = {};
       try {
@@ -511,7 +520,10 @@ export async function registerRoutes(app: Express): Promise<void> {
         source: "live",
       });
     } catch (error) {
-      res.status(500).json({ error: "Failed to lookup token" });
+      console.error("[LOOKUP] Error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to lookup token. Please try again." 
+      });
     }
   });
 
