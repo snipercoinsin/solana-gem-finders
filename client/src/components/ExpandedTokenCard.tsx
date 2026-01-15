@@ -12,8 +12,6 @@ import {
   Shield, 
   Lock, 
   CheckCircle, 
-  Twitter,
-  Send,
   Globe,
   TrendingUp,
   TrendingDown,
@@ -21,6 +19,7 @@ import {
   Activity,
   Flame
 } from 'lucide-react';
+import { FaXTwitter, FaTelegram } from 'react-icons/fa6';
 import { useToast } from '@/hooks/use-toast';
 
 interface ExpandedTokenCardProps {
@@ -193,10 +192,10 @@ export function ExpandedTokenCard({ token, isNew, isFeatured }: ExpandedTokenCar
                 href={token.twitterUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
                 data-testid="link-twitter"
               >
-                <Twitter className="w-3 h-3" /> Twitter
+                <FaXTwitter className="w-3 h-3" /> Twitter
               </a>
             )}
             {token.telegramUrl && (
@@ -204,10 +203,10 @@ export function ExpandedTokenCard({ token, isNew, isFeatured }: ExpandedTokenCar
                 href={token.telegramUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-secondary"
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-[#0088cc] transition-colors"
                 data-testid="link-telegram"
               >
-                <Send className="w-3 h-3" /> Telegram
+                <FaTelegram className="w-3 h-3" /> Telegram
               </a>
             )}
             {token.websiteUrl && (

@@ -1,4 +1,5 @@
-import { Activity, Zap, RefreshCw, Twitter, Send, Copy } from 'lucide-react';
+import { Activity, Zap, RefreshCw, Copy } from 'lucide-react';
+import { FaXTwitter, FaTelegram } from 'react-icons/fa6';
 import { Button } from '@/components/ui/button';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { useToast } from '@/hooks/use-toast';
@@ -70,19 +71,19 @@ export function Header({ tokenCount, lastScan, onManualScan, isScanning, nextSca
                 href={TWITTER_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="p-2 hover:text-primary transition-colors"
+                className="p-2 rounded-lg bg-muted/50 hover:bg-foreground hover:text-background transition-all duration-200"
                 data-testid="link-header-twitter"
               >
-                <Twitter className="w-4 h-4" />
+                <FaXTwitter className="w-5 h-5" />
               </a>
               <a
                 href={TELEGRAM_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="p-2 hover:text-primary transition-colors"
+                className="p-2 rounded-lg bg-muted/50 hover:bg-[#0088cc] hover:text-white transition-all duration-200"
                 data-testid="link-header-telegram"
               >
-                <Send className="w-4 h-4" />
+                <FaTelegram className="w-5 h-5" />
               </a>
             </div>
             
