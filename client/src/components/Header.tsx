@@ -76,27 +76,24 @@ export function Header({ tokenCount, lastScan, onManualScan, isScanning, nextSca
                 <span>Donate</span>
                 <SiSolana className="w-3.5 h-3.5" />
               </button>
-              <Button variant="ghost" size="icon" asChild>
-                <a
-                  href={TWITTER_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  data-testid="link-header-twitter"
-                >
-                  <FaXTwitter className="w-5 h-5" />
-                </a>
-              </Button>
-              <Button variant="ghost" size="icon" asChild>
-                <a
-                  href={TELEGRAM_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sky-500"
-                  data-testid="link-header-telegram"
-                >
-                  <FaTelegram className="w-5 h-5" />
-                </a>
-              </Button>
+              <a
+                href={TWITTER_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-1.5 rounded hover:bg-foreground/10 transition-colors"
+                data-testid="link-header-twitter"
+              >
+                <FaXTwitter className="w-4 h-4" />
+              </a>
+              <a
+                href={TELEGRAM_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-1.5 rounded hover:bg-[#229ED9]/20 text-[#229ED9] transition-colors"
+                data-testid="link-header-telegram"
+              >
+                <FaTelegram className="w-4 h-4" />
+              </a>
             </div>
             
             <ThemeSwitcher />
