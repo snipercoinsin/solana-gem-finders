@@ -1,9 +1,10 @@
-import { Activity, RefreshCw, Copy, Zap } from 'lucide-react';
+import { Activity, RefreshCw, Copy, Zap, Bot } from 'lucide-react';
 import { FaXTwitter, FaTelegram } from 'react-icons/fa6';
 import { SiSolana } from 'react-icons/si';
 import { Button } from '@/components/ui/button';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { useToast } from '@/hooks/use-toast';
+import { Link } from 'wouter';
 
 interface HeaderProps {
   tokenCount: number;
@@ -64,7 +65,7 @@ export function Header({ tokenCount, lastScan, onManualScan, isScanning, nextSca
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {/* Social Links & Donate */}
             <div className="hidden sm:flex items-center gap-1">
               <button 
@@ -97,6 +98,13 @@ export function Header({ tokenCount, lastScan, onManualScan, isScanning, nextSca
             </div>
             
             <ThemeSwitcher />
+
+            <Link href="/bot" data-testid="link-trading-bot">
+              <Button variant="outline" size="sm" className="border-violet-500/50 text-violet-400" data-testid="button-trading-bot">
+                <Bot className="w-4 h-4 mr-2" />
+                Sniper Bot
+              </Button>
+            </Link>
             
             <Button
               variant="outline"

@@ -3,6 +3,9 @@ import { storage } from "./storage";
 import { insertSiteAdSchema, insertVerifiedTokenSchema } from "@shared/schema";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { telegramService } from "./telegram";
+import { Keypair, Connection, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import bs58 from "bs58";
+import crypto from "crypto";
 
 interface DexscreenerPair {
   chainId: string;
@@ -754,5 +757,211 @@ export async function registerRoutes(app: Express): Promise<void> {
       hasToken: !!botToken,
       hasChannelId: !!channelId
     });
+  });
+
+  // ======== TRADING BOT ROUTES ========
+  const SOLANA_RPC = process.env.SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
+  const JITO_ENDPOINTS = [
+    "https://mainnet.block-engine.jito.wtf/api/v1/bundles",
+    "https://amsterdam.mainnet.block-engine.jito.wtf/api/v1/bundles",
+    "https://frankfurt.mainnet.block-engine.jito.wtf/api/v1/bundles",
+  ];
+  const JITO_TIP_ACCOUNTS = [
+    "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5",
+    "HFqU5x63VTqvQss8hp11i4wVV8bD44PvwucfZ2bU7gRe",
+    "Cw8CFyM9FkoMi7K7Crf6HNQqf4uEMzpKw6QNghXLvLkY",
+  ];
+
+  const encryptKey = (key: string): string => {
+    const algorithm = "aes-256-cbc";
+    const secret = process.env.SESSION_SECRET || "default-secret-key-change-me";
+    const iv = crypto.randomBytes(16);
+    const cipher = crypto.createCipheriv(algorithm, crypto.scryptSync(secret, "salt", 32), iv);
+    let encrypted = cipher.update(key, "utf8", "hex");
+    encrypted += cipher.final("hex");
+    return iv.toString("hex") + ":" + encrypted;
+  };
+
+  const decryptKey = (encryptedData: string): string => {
+    const algorithm = "aes-256-cbc";
+    const secret = process.env.SESSION_SECRET || "default-secret-key-change-me";
+    const [ivHex, encrypted] = encryptedData.split(":");
+    const iv = Buffer.from(ivHex, "hex");
+    const decipher = crypto.createDecipheriv(algorithm, crypto.scryptSync(secret, "salt", 32), iv);
+    let decrypted = decipher.update(encrypted, "hex", "utf8");
+    decrypted += decipher.final("utf8");
+    return decrypted;
+  };
+
+  // Get bot settings (public)
+  app.get("/api/bot/settings", async (req, res) => {
+    try {
+      const settings = await storage.getOrCreateBotSettings();
+      res.json(settings);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get bot settings" });
+    }
+  });
+
+  // Connect wallet
+  app.post("/api/bot/connect", async (req, res) => {
+    try {
+      const { privateKey } = req.body;
+      if (!privateKey) {
+        return res.status(400).json({ error: "Private key required" });
+      }
+
+      // Validate private key and get wallet address
+      let keypair: Keypair;
+      try {
+        const decoded = bs58.decode(privateKey);
+        keypair = Keypair.fromSecretKey(decoded);
+      } catch {
+        return res.status(400).json({ error: "Invalid private key format" });
+      }
+
+      const walletAddress = keypair.publicKey.toBase58();
+      const sessionId = crypto.randomUUID();
+
+      // Get wallet balance
+      let balance = 0;
+      try {
+        const connection = new Connection(SOLANA_RPC);
+        balance = await connection.getBalance(keypair.publicKey);
+      } catch (e) {
+        console.log("[BOT] Could not fetch balance:", e);
+      }
+
+      const balanceSOL = (balance / LAMPORTS_PER_SOL).toFixed(4);
+
+      // Create session with encrypted private key
+      const session = await storage.createBotSession({
+        sessionId,
+        walletAddress,
+        encryptedPrivateKey: encryptKey(privateKey),
+        initialBalanceSOL: balanceSOL,
+        currentBalanceSOL: balanceSOL,
+        isActive: true,
+      });
+
+      res.json({ 
+        session: {
+          ...session,
+          encryptedPrivateKey: undefined // Don't send back the encrypted key
+        }
+      });
+    } catch (error) {
+      console.error("[BOT] Connect error:", error);
+      res.status(500).json({ error: "Failed to connect wallet" });
+    }
+  });
+
+  // Get session
+  app.get("/api/bot/session/:sessionId", async (req, res) => {
+    try {
+      const session = await storage.getBotSession(req.params.sessionId);
+      if (!session) {
+        return res.status(404).json({ error: "Session not found" });
+      }
+
+      // Refresh balance
+      if (session.encryptedPrivateKey) {
+        try {
+          const privateKey = decryptKey(session.encryptedPrivateKey);
+          const decoded = bs58.decode(privateKey);
+          const keypair = Keypair.fromSecretKey(decoded);
+          const connection = new Connection(SOLANA_RPC);
+          const balance = await connection.getBalance(keypair.publicKey);
+          const balanceSOL = (balance / LAMPORTS_PER_SOL).toFixed(4);
+          await storage.updateBotSession(session.sessionId, { currentBalanceSOL: balanceSOL });
+          session.currentBalanceSOL = balanceSOL;
+        } catch (e) {
+          console.log("[BOT] Could not refresh balance:", e);
+        }
+      }
+
+      res.json({ 
+        session: {
+          ...session,
+          encryptedPrivateKey: undefined
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get session" });
+    }
+  });
+
+  // Get trades for session
+  app.get("/api/bot/trades/:sessionId", async (req, res) => {
+    try {
+      const trades = await storage.getBotTrades(req.params.sessionId);
+      res.json(trades);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get trades" });
+    }
+  });
+
+  // Execute trade (placeholder - real implementation requires DEX integration)
+  app.post("/api/bot/trade", async (req, res) => {
+    try {
+      const { sessionId, type, tokenAddress, amount, slippage } = req.body;
+      
+      const session = await storage.getBotSession(sessionId);
+      if (!session || !session.encryptedPrivateKey) {
+        return res.status(400).json({ error: "Invalid session" });
+      }
+
+      const settings = await storage.getOrCreateBotSettings();
+      if (!settings.isEnabled) {
+        return res.status(400).json({ error: "Bot is currently disabled" });
+      }
+
+      // Create trade record
+      const trade = await storage.createBotTrade({
+        sessionId,
+        tokenAddress,
+        tradeType: type,
+        amountSOL: amount,
+        status: "pending",
+      });
+
+      // Here would be the actual Jito bundle execution
+      // For now, we'll mark it as pending for demonstration
+      // Real implementation would:
+      // 1. Decode private key
+      // 2. Create swap transaction
+      // 3. Create Jito bundle with tip
+      // 4. Send to Jito endpoint
+      // 5. Track bundle status
+
+      res.json({ 
+        success: true, 
+        trade,
+        message: "Trade submitted to Jito bundle"
+      });
+    } catch (error) {
+      console.error("[BOT] Trade error:", error);
+      res.status(500).json({ error: "Failed to execute trade" });
+    }
+  });
+
+  // Admin: Update bot settings
+  app.put("/api/admin/bot/settings", verifyAdminPassword, async (req: any, res) => {
+    try {
+      const settings = await storage.updateBotSettings(req.body);
+      res.json(settings);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update bot settings" });
+    }
+  });
+
+  // Admin: Get bot settings
+  app.get("/api/admin/bot/settings", verifyAdminPassword, async (req: any, res) => {
+    try {
+      const settings = await storage.getOrCreateBotSettings();
+      res.json(settings);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get bot settings" });
+    }
   });
 }

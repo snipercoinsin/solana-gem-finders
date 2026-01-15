@@ -8,6 +8,7 @@ import { queryClient } from "@/lib/queryClient";
 import Index from "./pages/Index";
 import Admin from "./pages/Admin";
 import ArticlePage from "./pages/ArticlePage";
+import TradingBot from "./pages/TradingBot";
 import NotFound from "./pages/NotFound";
 
 const App = () => (
@@ -20,6 +21,7 @@ const App = () => (
           <Route path="/" component={Index} />
           <Route path="/ctrl-x7k9m2p4q8" component={Admin} />
           <Route path="/articles/:slug" component={ArticlePage} />
+          <Route path="/bot" component={TradingBot} />
           <Route component={NotFound} />
         </Switch>
       </TooltipProvider>

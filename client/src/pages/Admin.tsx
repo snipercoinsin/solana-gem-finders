@@ -32,7 +32,8 @@ import {
   EyeOff,
   ArrowLeft,
   Lock,
-  ExternalLink
+  ExternalLink,
+  Bot
 } from 'lucide-react';
 import { queryClient } from '@/lib/queryClient';
 
@@ -157,10 +158,14 @@ export default function Admin() {
 
       <main className="container mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-5 w-full max-w-2xl mb-6">
+          <TabsList className="grid grid-cols-6 w-full max-w-3xl mb-6">
             <TabsTrigger value="dashboard" className="flex items-center gap-1">
               <BarChart3 className="w-4 h-4" />
               <span className="hidden sm:inline">Stats</span>
+            </TabsTrigger>
+            <TabsTrigger value="bot" className="flex items-center gap-1">
+              <Bot className="w-4 h-4" />
+              <span className="hidden sm:inline">Bot</span>
             </TabsTrigger>
             <TabsTrigger value="ads" className="flex items-center gap-1">
               <Megaphone className="w-4 h-4" />
@@ -182,6 +187,10 @@ export default function Admin() {
 
           <TabsContent value="dashboard">
             <VisitorStatsPanel />
+          </TabsContent>
+
+          <TabsContent value="bot">
+            <BotSettingsPanel />
           </TabsContent>
 
           <TabsContent value="ads">
@@ -870,6 +879,222 @@ function AdminsPanel() {
               ))}
             </div>
           )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+interface BotSettings {
+  id: string;
+  isEnabled: boolean;
+  isFree: boolean;
+  subscriptionPriceSOL: string;
+  profitSharePercent: string;
+  minBuyAmountSOL: string;
+  maxBuyAmountSOL: string;
+  defaultSlippagePercent: string;
+  jitoTipLamports: number;
+  autoSellEnabled: boolean;
+  takeProfitPercent: string;
+  stopLossPercent: string;
+}
+
+function BotSettingsPanel() {
+  const { toast } = useToast();
+  const { data: settings, isLoading } = useQuery<BotSettings>({
+    queryKey: ['/api/admin/bot/settings'],
+    queryFn: () => adminApiRequest('/api/admin/bot/settings'),
+  });
+
+  const [formData, setFormData] = useState<Partial<BotSettings>>({});
+
+  useEffect(() => {
+    if (settings) {
+      setFormData(settings);
+    }
+  }, [settings]);
+
+  const updateMutation = useMutation({
+    mutationFn: (data: Partial<BotSettings>) =>
+      adminApiRequest('/api/admin/bot/settings', { method: 'PUT', body: JSON.stringify(data) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/bot/settings'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/bot/settings'] });
+      toast({ description: 'Bot settings updated!' });
+    },
+    onError: () => {
+      toast({ variant: 'destructive', description: 'Failed to update settings' });
+    },
+  });
+
+  if (isLoading) {
+    return <p>Loading bot settings...</p>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bot className="w-5 h-5" />
+            Trading Bot Settings
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                  <Label className="text-base font-medium">Bot Enabled</Label>
+                  <p className="text-sm text-muted-foreground">Allow users to use the trading bot</p>
+                </div>
+                <Switch
+                  checked={formData.isEnabled ?? true}
+                  onCheckedChange={(v) => setFormData({ ...formData, isEnabled: v })}
+                  data-testid="switch-bot-enabled"
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                  <Label className="text-base font-medium">Free Mode</Label>
+                  <p className="text-sm text-muted-foreground">Bot is free (no subscription required)</p>
+                </div>
+                <Switch
+                  checked={formData.isFree ?? true}
+                  onCheckedChange={(v) => setFormData({ ...formData, isFree: v })}
+                  data-testid="switch-bot-free"
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                  <Label className="text-base font-medium">Auto Sell</Label>
+                  <p className="text-sm text-muted-foreground">Enable automatic take profit / stop loss</p>
+                </div>
+                <Switch
+                  checked={formData.autoSellEnabled ?? true}
+                  onCheckedChange={(v) => setFormData({ ...formData, autoSellEnabled: v })}
+                  data-testid="switch-auto-sell"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <Label>Subscription Price (SOL)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={formData.subscriptionPriceSOL || '0'}
+                  onChange={(e) => setFormData({ ...formData, subscriptionPriceSOL: e.target.value })}
+                  disabled={formData.isFree}
+                  data-testid="input-subscription-price"
+                />
+              </div>
+
+              <div>
+                <Label>Profit Share (%)</Label>
+                <Input
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  max="50"
+                  value={formData.profitSharePercent || '5'}
+                  onChange={(e) => setFormData({ ...formData, profitSharePercent: e.target.value })}
+                  data-testid="input-profit-share"
+                />
+                <p className="text-xs text-muted-foreground mt-1">Commission on profits only (not losses)</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Min Buy (SOL)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={formData.minBuyAmountSOL || '0.01'}
+                    onChange={(e) => setFormData({ ...formData, minBuyAmountSOL: e.target.value })}
+                    data-testid="input-min-buy"
+                  />
+                </div>
+                <div>
+                  <Label>Max Buy (SOL)</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={formData.maxBuyAmountSOL || '1'}
+                    onChange={(e) => setFormData({ ...formData, maxBuyAmountSOL: e.target.value })}
+                    data-testid="input-max-buy"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Default Slippage (%)</Label>
+                  <Input
+                    type="number"
+                    step="1"
+                    min="1"
+                    max="50"
+                    value={formData.defaultSlippagePercent || '15'}
+                    onChange={(e) => setFormData({ ...formData, defaultSlippagePercent: e.target.value })}
+                    data-testid="input-slippage"
+                  />
+                </div>
+                <div>
+                  <Label>Jito Tip (lamports)</Label>
+                  <Input
+                    type="number"
+                    data-testid="input-jito-tip"
+                    step="1000"
+                    min="1000"
+                    value={formData.jitoTipLamports || 10000}
+                    onChange={(e) => setFormData({ ...formData, jitoTipLamports: parseInt(e.target.value) })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Take Profit (%)</Label>
+                  <Input
+                    type="number"
+                    step="5"
+                    min="10"
+                    max="500"
+                    value={formData.takeProfitPercent || '50'}
+                    onChange={(e) => setFormData({ ...formData, takeProfitPercent: e.target.value })}
+                    data-testid="input-take-profit"
+                  />
+                </div>
+                <div>
+                  <Label>Stop Loss (%)</Label>
+                  <Input
+                    type="number"
+                    step="5"
+                    min="5"
+                    max="90"
+                    value={formData.stopLossPercent || '30'}
+                    onChange={(e) => setFormData({ ...formData, stopLossPercent: e.target.value })}
+                    data-testid="input-stop-loss"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <Button 
+            onClick={() => updateMutation.mutate(formData)}
+            disabled={updateMutation.isPending}
+            className="w-full"
+            data-testid="button-save-bot-settings"
+          >
+            <Save className="w-4 h-4 mr-2" />
+            {updateMutation.isPending ? 'Saving...' : 'Save Bot Settings'}
+          </Button>
         </CardContent>
       </Card>
     </div>

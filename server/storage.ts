@@ -1,13 +1,16 @@
 import { db } from "./db";
 import { 
   verifiedTokens, scanLogs, failedTokens, siteAds,
-  adminUsers, featuredTokens, visitorStats, articles
+  adminUsers, featuredTokens, visitorStats, articles,
+  botSettings, botUserSessions, botTrades
 } from "@shared/schema";
 import type { 
   InsertVerifiedToken, InsertScanLog, InsertFailedToken, InsertSiteAd,
   InsertAdminUser, InsertFeaturedToken, InsertVisitorStat, InsertArticle,
+  InsertBotSettings, InsertBotUserSession, InsertBotTrade,
   VerifiedToken, ScanLog, FailedToken, SiteAd,
-  AdminUser, FeaturedToken, VisitorStat, Article
+  AdminUser, FeaturedToken, VisitorStat, Article,
+  BotSettings, BotUserSession, BotTrade
 } from "@shared/schema";
 import { eq, desc, sql, gte, and } from "drizzle-orm";
 
@@ -304,6 +307,69 @@ export class DatabaseStorage implements IStorage {
       year: Number(yearStats?.sum || 0),
       total: Number(totalStats?.sum || 0),
     };
+  }
+
+  // Bot Settings
+  async getBotSettings(): Promise<BotSettings | null> {
+    const [settings] = await db.select().from(botSettings).limit(1);
+    return settings || null;
+  }
+
+  async getOrCreateBotSettings(): Promise<BotSettings> {
+    let [settings] = await db.select().from(botSettings).limit(1);
+    if (!settings) {
+      [settings] = await db.insert(botSettings).values({}).returning();
+    }
+    return settings;
+  }
+
+  async updateBotSettings(data: Partial<InsertBotSettings>): Promise<BotSettings> {
+    const existing = await this.getOrCreateBotSettings();
+    const [updated] = await db.update(botSettings)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(botSettings.id, existing.id))
+      .returning();
+    return updated;
+  }
+
+  // Bot User Sessions
+  async getBotSession(sessionId: string): Promise<BotUserSession | null> {
+    const [session] = await db.select().from(botUserSessions)
+      .where(eq(botUserSessions.sessionId, sessionId));
+    return session || null;
+  }
+
+  async createBotSession(data: InsertBotUserSession): Promise<BotUserSession> {
+    const [session] = await db.insert(botUserSessions).values(data).returning();
+    return session;
+  }
+
+  async updateBotSession(sessionId: string, data: Partial<InsertBotUserSession>): Promise<BotUserSession | null> {
+    const [updated] = await db.update(botUserSessions)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(botUserSessions.sessionId, sessionId))
+      .returning();
+    return updated || null;
+  }
+
+  // Bot Trades
+  async getBotTrades(sessionId: string): Promise<BotTrade[]> {
+    return db.select().from(botTrades)
+      .where(eq(botTrades.sessionId, sessionId))
+      .orderBy(desc(botTrades.createdAt));
+  }
+
+  async createBotTrade(data: InsertBotTrade): Promise<BotTrade> {
+    const [trade] = await db.insert(botTrades).values(data).returning();
+    return trade;
+  }
+
+  async updateBotTrade(id: string, data: Partial<InsertBotTrade>): Promise<BotTrade | null> {
+    const [updated] = await db.update(botTrades)
+      .set(data)
+      .where(eq(botTrades.id, id))
+      .returning();
+    return updated || null;
   }
 }
 
