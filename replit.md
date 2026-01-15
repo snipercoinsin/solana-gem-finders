@@ -102,19 +102,24 @@ Uses Replit's PostgreSQL database with Drizzle ORM.
 
 ## Trading Bot Features
 - **Wallet Connection**: Import private key (encrypted with AES-256-CBC)
+- **Wallet Generation**: Generate new Solana wallet directly on the site
 - **Quick Snipe**: Fast buy tokens with customizable SOL amount and slippage
 - **Jito Integration**: MEV-protected transactions via Jito bundle endpoints
-- **Auto Sell**: Automatic take profit and stop loss functionality
-- **Profit Tracking**: 5% commission on profits only (nothing on losses)
+- **Auto Sniper**: Automatic token buying when enabled (monitors scanner for new tokens)
+- **Profit Tracking**: Commission on profits only (configurable %, nothing on losses)
+- **Commission Transfer**: Automatic profit share sent to owner wallet on profitable sells
 - **Admin Controls**: Enable/disable bot, set subscription price, configure trading limits
 - **Trade History**: View all past trades with P/L tracking
+- **Secure Logout**: Option to delete generated wallet on disconnect or keep it for later
 
 ### Bot API Routes
 - `GET /api/bot/settings` - Public bot settings (limits, enabled status)
 - `POST /api/bot/connect` - Connect wallet with private key
+- `POST /api/bot/generate-wallet` - Generate new Solana wallet
 - `POST /api/bot/buy` - Execute buy order via Jito
 - `POST /api/bot/sell` - Execute sell order via Jito
 - `GET /api/bot/session/:sessionId` - Get session details and balance
+- `DELETE /api/bot/session/:sessionId` - Delete session and wallet data
 - `GET /api/bot/trades/:sessionId` - Get trade history
 - `GET/PUT /api/admin/bot/settings` - Admin bot configuration
 
