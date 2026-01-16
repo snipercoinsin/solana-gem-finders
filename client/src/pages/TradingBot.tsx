@@ -496,12 +496,22 @@ export default function TradingBot() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="p-4 bg-muted/50 rounded-lg">
+                  <div className="p-4 bg-muted/50 rounded-lg">
+                    <div className="flex items-center justify-between mb-1">
                       <p className="text-xs text-muted-foreground">Address</p>
-                      <p className="font-mono text-sm truncate">{session.walletAddress}</p>
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        onClick={() => copyToClipboard(session.walletAddress)}
+                        className="h-6 w-6"
+                        title="Copy address"
+                      >
+                        <Copy className="w-3 h-3" />
+                      </Button>
                     </div>
-                    <div className="p-4 bg-muted/50 rounded-lg">
+                    <p className="font-mono text-sm truncate">{session.walletAddress}</p>
+                  </div>                    
+                  <div className="p-4 bg-muted/50 rounded-lg">
                       <p className="text-xs text-muted-foreground">Balance</p>
                       <p className="text-lg font-bold">{parseFloat(session.currentBalanceSOL || '0').toFixed(4)} SOL</p>
                     </div>
