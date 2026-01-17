@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server/index.ts",
-    "build": "vite build && esbuild server/index.ts --bundle --platform=node --outfile=dist/server.mjs --format=esm --packages=external",
+      "build": "vite build && esbuild server/index.ts --bundle --platform=node --outfile=dist/server.mjs --format=esm --packages=external",
+      "start": "node dist/server.mjs",
     "db:push": "drizzle-kit push",
     "lint": "eslint ."
   },
