@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "tsx server/index.ts",
-    "build": "vite build && esbuild server/index.ts --bundle --platform=node --outfile=dist/index.mjs --format=esm --packages=external --minify",
+    "build": "vite build",
     "start": "node dist/index.mjs",
     "db:push": "drizzle-kit push",
     "lint": "eslint .",
